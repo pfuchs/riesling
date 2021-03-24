@@ -114,24 +114,25 @@ void zinfandel(
       n_src,
       n_spoke,
       n_read);
+  long const total_spokes = ks.dimension(2);
+  float const scale = R0(ks.abs().maximum())();
+  auto spoke_task = [&](long const spoke_lo, long const spoke_hi) {
+    std::vector<long> spokes(n_spoke);
+    for (auto is = spoke_lo; is < spoke_hi; is++) {
+      std::iota(
+          spokes.begin(), spokes.end(), std::clamp(is - n_spoke / 2, 0L, total_spokes - n_spoke));
+      auto const calS = GrabSources(ks, scale, n_src, gap_sz + 1, n_read, spokes);
+      auto const calT = GrabTargets(ks, scale, gap_sz, n_read, spokes);
+      auto const W = CalcWeights(calS, calT, lambda);
 
-  for (long ig = gap_sz; ig > 0; ig--) {
-    auto spoke_task = [&](long const spoke_lo, long const spoke_hi) {
-      std::vector<long> all_spokes(ks.dimension(2)); // Need a thread-local copy of the indices
-      std::iota(all_spokes.begin(), all_spokes.end(), 0L);
-      for (auto is = spoke_lo; is < spoke_hi; is++) {
-        float const scale = R0(ks.chip(is, 2).abs().maximum())();
-        auto const spokes = FindClosest(traj, is, n_spoke, all_spokes);
-        auto const calS = GrabSources(ks, scale, n_src, ig + 1, n_read, spokes);
-        auto const calT = GrabTargets(ks, scale, ig, n_read, spokes);
-        auto const W = CalcWeights(calS, calT, lambda);
+      for (long ig = gap_sz; ig > 0; ig--) {
         auto const S = GrabSources(ks, scale, n_src, ig, 1, {is});
         auto const T = W * S;
         for (long icoil = 0; icoil < ks.dimension(0); icoil++) {
           ks(icoil, ig - 1, is) = T(icoil) * scale;
         }
       }
-    };
-    Threads::RangeFor(spoke_task, 0, ks.dimension(2));
-  }
+    }
+  };
+  Threads::RangeFor(spoke_task, 0, total_spokes);
 }
