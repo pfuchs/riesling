@@ -11,25 +11,35 @@
 Cx2 GrabSources(
     Cx3 const &ks,
     float const scale,
-    long const n_src,
-    long const s_read,
-    long const n_read,
+    std::vector<long> const &src_offsets,
+    long const st_cal_read,
+    long const n_cal_read,
     std::vector<long> const &spokes)
 {
-  assert((s_read + n_read + n_src) < ks.dimension(1));
+  assert(src_offsets.size());
+  assert(
+      (st_cal_read + n_cal_read + *std::max_element(src_offsets.begin(), src_offsets.end())) <
+      ks.dimension(1));
   long const n_chan = ks.dimension(0);
-  long const n_spoke = spokes.size();
-  Cx2 S(n_chan * n_src, n_read * n_spoke);
+  long const n_cal_spoke = spokes.size();
+  long const n_src = src_offsets.size();
+  Cx2 S(n_chan * n_src, n_cal_read * n_cal_spoke);
   S.setZero();
-  for (long i_spoke = 0; i_spoke < n_spoke; i_spoke++) {
-    long const col_spoke = i_spoke * n_read;
+  auto const sc = S.slice(Sz2{0, 0}, Sz2{n_chan, 1}).constant(scale);
+  for (long i_spoke = 0; i_spoke < n_cal_spoke; i_spoke++) {
+    long const col_spoke = i_spoke * n_cal_read;
     long const ind_spoke = spokes[i_spoke];
     assert(ind_spoke < ks.dimension(2));
-    for (long i_read = 0; i_read < n_read; i_read++) {
-      long const col = col_spoke + i_read;
-      S.chip(col, 1) = ks.slice(Sz3{0, s_read + i_read, ind_spoke}, Sz3{n_chan, n_src, 1})
-                           .reshape(Sz1{n_chan * n_src}) /
-                       S.chip(col, 1).constant(scale);
+    for (long ir = 0; ir < n_cal_read; ir++) {
+      long const col = col_spoke + ir;
+      for (long is = 0; is < n_src; is++) {
+        long const ind_read = st_cal_read + ir + src_offsets[is];
+        long const row = is * n_chan;
+        assert(ind_read >= 0);
+        assert(ind_read < ks.dimension(1));
+        S.slice(Sz2{row, col}, Sz2{n_chan, 1}) =
+            ks.slice(Sz3{0, ind_read, ind_spoke}, Sz3{n_chan, 1, 1}).reshape(Sz2{n_chan, 1}) / sc;
+      }
     }
   }
   return S;
@@ -38,21 +48,21 @@ Cx2 GrabSources(
 Cx2 GrabTargets(
     Cx3 const &ks,
     float const scale,
-    long const s_read,
-    long const n_read,
+    long const st_tgt_read,
+    long const n_tgt_read,
     std::vector<long> const &spokes)
 {
   long const n_chan = ks.dimension(0);
   long const n_spoke = spokes.size();
-  Cx2 T(n_chan, n_read * n_spoke);
+  Cx2 T(n_chan, n_tgt_read * n_spoke);
   T.setZero();
   for (long i_spoke = 0; i_spoke < n_spoke; i_spoke++) {
-    long const col_spoke = i_spoke * n_read;
+    long const col_spoke = i_spoke * n_tgt_read;
     long const ind_spoke = spokes[i_spoke];
-    for (long i_read = 0; i_read < n_read; i_read++) {
+    for (long i_read = 0; i_read < n_tgt_read; i_read++) {
       long const col = col_spoke + i_read;
       T.chip(col, 1) =
-          ks.chip(ind_spoke, 2).chip(s_read + i_read, 1) / T.chip(col, 1).constant(scale);
+          ks.chip(ind_spoke, 2).chip(st_tgt_read + i_read, 1) / T.chip(col, 1).constant(scale);
     }
   }
   return T;
@@ -96,34 +106,38 @@ FindClosest(R3 const &traj, long const &tgt, long const &n_spoke, std::vector<lo
 void zinfandel(
     long const gap_sz,
     long const n_src,
-    long const n_spoke,
-    long const n_read1,
+    long const n_cal_spoke,
+    long const n_cal_read1,
     float const lambda,
     R3 const &traj,
     Cx3 &ks,
     Log &log)
 {
-  long const n_read = n_read1 < 1 ? ks.dimension(1) - (gap_sz + n_src) : n_read1;
+  long const n_cal_read = n_cal_read1 < 1 ? ks.dimension(1) - (gap_sz + n_src) : n_cal_read1;
 
   log.info(
       FMT_STRING("ZINFANDEL Gap {} Sources {} Cal Spokes/Read {}/{} "),
       gap_sz,
       n_src,
-      n_spoke,
-      n_read);
+      n_cal_spoke,
+      n_cal_read);
   long const total_spokes = ks.dimension(2);
   float const scale = R0(ks.abs().maximum())();
+  std::vector<long> srcs(n_src);
+  std::iota(srcs.begin(), srcs.end(), 1);
   auto spoke_task = [&](long const spoke_lo, long const spoke_hi) {
-    std::vector<long> spokes(n_spoke);
+    std::vector<long> spokes(n_cal_spoke);
     for (auto is = spoke_lo; is < spoke_hi; is++) {
       std::iota(
-          spokes.begin(), spokes.end(), std::clamp(is - n_spoke / 2, 0L, total_spokes - n_spoke));
-      auto const calS = GrabSources(ks, scale, n_src, gap_sz + 1, n_read, spokes);
-      auto const calT = GrabTargets(ks, scale, gap_sz, n_read, spokes);
+          spokes.begin(),
+          spokes.end(),
+          std::clamp(is - n_cal_spoke / 2, 0L, total_spokes - n_cal_spoke));
+      auto const calS = GrabSources(ks, scale, srcs, gap_sz + 1, n_cal_read, spokes);
+      auto const calT = GrabTargets(ks, scale, gap_sz, n_cal_read, spokes);
       auto const W = CalcWeights(calS, calT, lambda);
 
       for (long ig = gap_sz; ig > 0; ig--) {
-        auto const S = GrabSources(ks, scale, n_src, ig, 1, {is});
+        auto const S = GrabSources(ks, scale, srcs, ig, 1, {is});
         Eigen::Map<Eigen::MatrixXcf const> SM(S.data(), S.dimension(0), S.dimension(1));
         auto const T = W * SM;
         for (long icoil = 0; icoil < ks.dimension(0); icoil++) {

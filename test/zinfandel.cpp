@@ -24,8 +24,10 @@ TEST_CASE("ZINFANDEL Data mangling", "[ZINFANDEL]")
   SECTION("Grab Sources")
   {
     long const n_src = 4;
+    std::vector<long> srcs(n_src);
+    std::iota(srcs.begin(), srcs.end(), 0);
     long const n_read = 4;
-    auto const S = GrabSources(kspace, scale, n_src, 0, n_read, {0});
+    auto const S = GrabSources(kspace, scale, srcs, 0, n_read, {0});
     CHECK(S.dimension(0) == (n_coil * n_src));
     CHECK(S.dimension(1) == n_read);
     CHECK(B0((S.real() > S.real().constant(0.f)).all())());
