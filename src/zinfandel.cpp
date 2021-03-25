@@ -8,7 +8,7 @@
 #include <complex>
 
 // Helper Functions
-Eigen::MatrixXcf GrabSources(
+Cx2 GrabSources(
     Cx3 const &ks,
     float const scale,
     long const n_src,
@@ -19,7 +19,7 @@ Eigen::MatrixXcf GrabSources(
   assert((s_read + n_read + n_src) < ks.dimension(1));
   long const n_chan = ks.dimension(0);
   long const n_spoke = spokes.size();
-  Eigen::MatrixXcf S(n_chan * n_src, n_read * n_spoke);
+  Cx2 S(n_chan * n_src, n_read * n_spoke);
   S.setZero();
   for (long i_spoke = 0; i_spoke < n_spoke; i_spoke++) {
     long const col_spoke = i_spoke * n_read;
@@ -27,19 +27,15 @@ Eigen::MatrixXcf GrabSources(
     assert(ind_spoke < ks.dimension(2));
     for (long i_read = 0; i_read < n_read; i_read++) {
       long const col = col_spoke + i_read;
-      for (long i_coil = 0; i_coil < n_chan; i_coil++) {
-        long const row_coil = i_coil * n_src;
-        for (long i_src = 0; i_src < n_src; i_src++) {
-          long const row = row_coil + i_src;
-          S(row, col) = ks(i_coil, s_read + i_read + i_src, ind_spoke) / scale;
-        }
-      }
+      S.chip(col, 1) = ks.slice(Sz3{0, s_read + i_read, ind_spoke}, Sz3{n_chan, n_src, 1})
+                           .reshape(Sz1{n_chan * n_src}) /
+                       S.chip(col, 1).constant(scale);
     }
   }
   return S;
 }
 
-Eigen::MatrixXcf GrabTargets(
+Cx2 GrabTargets(
     Cx3 const &ks,
     float const scale,
     long const s_read,
@@ -48,32 +44,33 @@ Eigen::MatrixXcf GrabTargets(
 {
   long const n_chan = ks.dimension(0);
   long const n_spoke = spokes.size();
-  Eigen::MatrixXcf T(n_chan, n_read * n_spoke);
+  Cx2 T(n_chan, n_read * n_spoke);
   T.setZero();
   for (long i_spoke = 0; i_spoke < n_spoke; i_spoke++) {
     long const col_spoke = i_spoke * n_read;
     long const ind_spoke = spokes[i_spoke];
     for (long i_read = 0; i_read < n_read; i_read++) {
       long const col = col_spoke + i_read;
-      for (long i_coil = 0; i_coil < n_chan; i_coil++) {
-        T(i_coil, col) = ks(i_coil, s_read + i_read, ind_spoke) / scale;
-      }
+      T.chip(col, 1) =
+          ks.chip(ind_spoke, 2).chip(s_read + i_read, 1) / T.chip(col, 1).constant(scale);
     }
   }
   return T;
 }
 
-Eigen::MatrixXcf
-CalcWeights(Eigen::MatrixXcf const &src, Eigen::MatrixXcf const tgt, float const lambda)
+Eigen::MatrixXcf CalcWeights(Cx2 const &src, Cx2 const tgt, float const lambda)
 {
+  Eigen::Map<Eigen::MatrixXcf const> srcM(src.data(), src.dimension(0), src.dimension(1));
+  Eigen::Map<Eigen::MatrixXcf const> tgtM(tgt.data(), tgt.dimension(0), tgt.dimension(1));
+
   if (lambda > 0.f) {
-    auto const reg = lambda * src.norm() * Eigen::MatrixXcf::Identity(src.rows(), src.rows());
-    auto const rhs = src * src.adjoint() + reg;
+    auto const reg = lambda * srcM.norm() * Eigen::MatrixXcf::Identity(srcM.rows(), srcM.rows());
+    auto const rhs = srcM * srcM.adjoint() + reg;
     Eigen::MatrixXcf pinv = rhs.completeOrthogonalDecomposition().pseudoInverse();
-    return tgt * src.adjoint() * pinv;
+    return tgtM * srcM.adjoint() * pinv;
   } else {
-    Eigen::MatrixXcf const pinv = src.completeOrthogonalDecomposition().pseudoInverse();
-    return tgt * pinv;
+    Eigen::MatrixXcf const pinv = srcM.completeOrthogonalDecomposition().pseudoInverse();
+    return tgtM * pinv;
   }
 }
 
@@ -127,7 +124,8 @@ void zinfandel(
 
       for (long ig = gap_sz; ig > 0; ig--) {
         auto const S = GrabSources(ks, scale, n_src, ig, 1, {is});
-        auto const T = W * S;
+        Eigen::Map<Eigen::MatrixXcf const> SM(S.data(), S.dimension(0), S.dimension(1));
+        auto const T = W * SM;
         for (long icoil = 0; icoil < ks.dimension(0); icoil++) {
           ks(icoil, ig - 1, is) = T(icoil) * scale;
         }

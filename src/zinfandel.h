@@ -20,7 +20,7 @@ void zinfandel(
 /*!
  *  Helper functions exposed for testing
  */
-Eigen::MatrixXcf GrabSources(
+Cx2 GrabSources(
     Cx3 const &ks,
     float const scale,
     long const n_src,
@@ -28,7 +28,7 @@ Eigen::MatrixXcf GrabSources(
     long const n_read,
     std::vector<long> const &spokes);
 
-Eigen::MatrixXcf GrabTargets(
+Cx2 GrabTargets(
     Cx3 const &ks,
     float const scale,
     long const s_read,

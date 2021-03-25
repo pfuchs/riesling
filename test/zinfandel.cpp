@@ -26,10 +26,10 @@ TEST_CASE("ZINFANDEL Data mangling", "[ZINFANDEL]")
     long const n_src = 4;
     long const n_read = 4;
     auto const S = GrabSources(kspace, scale, n_src, 0, n_read, {0});
-    CHECK(S.rows() == (n_coil * n_src));
-    CHECK(S.cols() == n_read);
-    CHECK((S.array().real() > 0.).all());
-    CHECK(S(0, 0).real() == Approx(1. / scale));
+    CHECK(S.dimension(0) == (n_coil * n_src));
+    CHECK(S.dimension(1) == n_read);
+    CHECK(B0((S.real() > S.real().constant(0.f)).all())());
+    CHECK(S(0, 0).real() == Approx(1.f / scale));
     CHECK(
         S((n_coil * n_src) - 1, n_read - 1).real() ==
         Approx((n_read - 1 + n_src - 1 + n_coil - 1 + 1) / scale));
@@ -39,10 +39,10 @@ TEST_CASE("ZINFANDEL Data mangling", "[ZINFANDEL]")
   {
     long const n_read = 4;
     auto const T = GrabTargets(kspace, scale, 0, n_read, {0});
-    CHECK(T.rows() == n_coil);
-    CHECK(T.cols() == n_read);
-    CHECK((T.array().real() > 0.).all());
-    CHECK(T(0, 0).real() == Approx(1. / scale));
+    CHECK(T.dimension(0) == n_coil);
+    CHECK(T.dimension(1) == n_read);
+    CHECK(B0((T.real() > T.real().constant(0.f)).all())());
+    CHECK(T(0, 0).real() == Approx(1.f / scale));
     CHECK(T(n_coil - 1, n_read - 1).real() == Approx((n_read + n_coil - 1) / scale));
   }
 }
