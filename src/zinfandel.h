@@ -17,6 +17,15 @@ void zinfandel(
     Cx3 &ks,
     Log &log);
 
+void zinfandel2(
+    long const gap_sz,
+    long const n_src,
+    long const n_cal_read,
+    float const lambda,
+    R3 const &traj,
+    Cx3 &ks,
+    Log &log);
+
 /*!
  *  Helper functions exposed for testing
  */

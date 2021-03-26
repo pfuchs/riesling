@@ -28,6 +28,7 @@ int main_zinfandel(args::Subparser &parser)
       parser, "PULSE WIDTH", "Pulse-width for slab profile correction", {"pw"}, 0.f);
   args::ValueFlag<float> rbw(
       parser, "BANDWIDTH", "Read-out bandwidth for slab profile correction (kHz)", {"rbw"}, 0.f);
+  args::Flag twostep(parser, "TWOSTEP", "Use two step method", {"two", '2'});
   Log log = ParseCommand(parser, fname);
 
   HD5Reader reader(fname.Get(), log);
@@ -49,7 +50,11 @@ int main_zinfandel(args::Subparser &parser)
   Cx3 rad_ks = info.noncartesianVolume();
   for (auto const &iv : WhichVolumes(volume.Get(), info.volumes)) {
     reader.readData(iv, rad_ks);
-    zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), l1.Get(), traj, rad_ks, log);
+    if (twostep) {
+      zinfandel2(gap_sz, src.Get(), read.Get(), l1.Get(), traj, rad_ks, log);
+    } else {
+      zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), l1.Get(), traj, rad_ks, log);
+    }
     if (pw && rbw) {
       slab_correct(out_info, pw.Get(), rbw.Get(), rad_ks, log);
     }

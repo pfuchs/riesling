@@ -68,20 +68,22 @@ Cx2 GrabTargets(
   return T;
 }
 
-Eigen::MatrixXcf CalcWeights(Cx2 const &src, Cx2 const tgt, float const lambda)
+Cx2 CalcWeights(Cx2 const &src, Cx2 const tgt, float const lambda)
 {
+  Cx2 W(tgt.dimension(0), src.dimension(0));
   Eigen::Map<Eigen::MatrixXcf const> srcM(src.data(), src.dimension(0), src.dimension(1));
   Eigen::Map<Eigen::MatrixXcf const> tgtM(tgt.data(), tgt.dimension(0), tgt.dimension(1));
-
+  Eigen::Map<Eigen::MatrixXcf> Wm(W.data(), W.dimension(0), W.dimension(1));
   if (lambda > 0.f) {
     auto const reg = lambda * srcM.norm() * Eigen::MatrixXcf::Identity(srcM.rows(), srcM.rows());
     auto const rhs = srcM * srcM.adjoint() + reg;
     Eigen::MatrixXcf pinv = rhs.completeOrthogonalDecomposition().pseudoInverse();
-    return tgtM * srcM.adjoint() * pinv;
+    Wm = tgtM * srcM.adjoint() * pinv;
   } else {
     Eigen::MatrixXcf const pinv = srcM.completeOrthogonalDecomposition().pseudoInverse();
-    return tgtM * pinv;
+    Wm = tgtM * pinv;
   }
+  return W;
 }
 
 std::vector<long>
@@ -114,7 +116,6 @@ void zinfandel(
     Log &log)
 {
   long const n_cal_read = n_cal_read1 < 1 ? ks.dimension(1) - (gap_sz + n_src) : n_cal_read1;
-
   log.info(
       FMT_STRING("ZINFANDEL Gap {} Sources {} Cal Spokes/Read {}/{} "),
       gap_sz,
@@ -128,6 +129,9 @@ void zinfandel(
   auto spoke_task = [&](long const spoke_lo, long const spoke_hi) {
     std::vector<long> spokes(n_cal_spoke);
     for (auto is = spoke_lo; is < spoke_hi; is++) {
+      if (spoke_lo == 0) {
+        log.progress(is, spoke_hi);
+      }
       std::iota(
           spokes.begin(),
           spokes.end(),
@@ -135,16 +139,64 @@ void zinfandel(
       auto const calS = GrabSources(ks, scale, srcs, gap_sz + 1, n_cal_read, spokes);
       auto const calT = GrabTargets(ks, scale, gap_sz, n_cal_read, spokes);
       auto const W = CalcWeights(calS, calT, lambda);
-
       for (long ig = gap_sz; ig > 0; ig--) {
         auto const S = GrabSources(ks, scale, srcs, ig, 1, {is});
-        Eigen::Map<Eigen::MatrixXcf const> SM(S.data(), S.dimension(0), S.dimension(1));
-        auto const T = W * SM;
-        for (long icoil = 0; icoil < ks.dimension(0); icoil++) {
-          ks(icoil, ig - 1, is) = T(icoil) * scale;
-        }
+        Cx1 T = W.contract(S, Eigen::IndexPairList<Eigen::type2indexpair<1, 0>>())
+                    .reshape(Sz1{ks.dimension(0)});
+        ks.chip(is, 2).chip(ig - 1, 1) = T * T.constant(scale);
       }
     }
   };
-  Threads::RangeFor(spoke_task, 0, total_spokes);
+  Threads::RangeFor(spoke_task, total_spokes);
+}
+
+// Actual calculation
+void zinfandel2(
+    long const gap_sz,
+    long const n_src,
+    long const n_cal_read1,
+    float const lambda,
+    R3 const &traj,
+    Cx3 &ks,
+    Log &log)
+{
+  long const n_cal_read = n_cal_read1 < 1 ? ks.dimension(1) - (gap_sz + n_src) : n_cal_read1;
+  long const n_chan = ks.dimension(0);
+  log.info(
+      FMT_STRING("ZINFANDEL Two-Step Gap {} Sources {} Cal Read {} "), gap_sz, n_src, n_cal_read);
+  long const total_spokes = ks.dimension(2);
+  float const scale = R0(ks.abs().maximum())();
+  std::vector<long> srcs(n_src);
+  long tgt_off = 0;
+
+  auto task = [&](long const spoke_lo, long const spoke_hi) {
+    std::vector<long> spoke(1);
+    for (auto is = spoke_lo; is < spoke_hi; is++) {
+      if (spoke_lo == 0) {
+        log.progress(is, spoke_hi);
+      }
+      spoke[0] = is;
+      auto const calS = GrabSources(ks, scale, srcs, gap_sz + tgt_off, n_cal_read, spoke);
+      auto const calT = GrabTargets(ks, scale, gap_sz + tgt_off, n_cal_read, spoke);
+      auto const W = CalcWeights(calS, calT, lambda);
+      auto const S = GrabSources(ks, scale, srcs, gap_sz, 1, spoke);
+      Cx1 T = W.contract(S, Eigen::IndexPairList<Eigen::type2indexpair<1, 0>>())
+                  .reshape(Sz1{ks.dimension(0)});
+      ks.chip(is, 2).chip(tgt_off, 1) = T * T.constant(scale);
+    }
+  };
+
+  std::iota(srcs.begin(), srcs.end(), gap_sz);
+  log.info("Target index: {} Source indices: {}", 0, fmt::join(srcs, ","));
+  Threads::RangeFor(task, 0, total_spokes);
+  Cx1 const mean = ks.chip(0, 1).mean(Sz1{1});
+  ks.chip(0, 1).device(Threads::GlobalDevice()) =
+      mean.reshape(Sz2{n_chan, 1}).broadcast(Sz2{1, total_spokes});
+  for (long ig = 1; ig < gap_sz; ig++) {
+    tgt_off = ig;
+    srcs[0] = -ig;
+    std::iota(srcs.begin() + 1, srcs.end(), gap_sz - ig);
+    log.info("Target index: {} Source indices: {}", 0, fmt::join(srcs, ","));
+    Threads::RangeFor(task, total_spokes);
+  }
 }
