@@ -50,10 +50,10 @@ int main_zinfandel(args::Subparser &parser)
   Cx3 rad_ks = info.noncartesianVolume();
   for (auto const &iv : WhichVolumes(volume.Get(), info.volumes)) {
     reader.readData(iv, rad_ks);
+    zinfandel(
+        gap_sz, src.Get(), spokes.Get(), read.Get(), twostep ? l1.Get() : 0.f, traj, rad_ks, log);
     if (twostep) {
       zinfandel2(gap_sz, src.Get(), read.Get(), l1.Get(), traj, rad_ks, log);
-    } else {
-      zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), l1.Get(), traj, rad_ks, log);
     }
     if (pw && rbw) {
       slab_correct(out_info, pw.Get(), rbw.Get(), rad_ks, log);

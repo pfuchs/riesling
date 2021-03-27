@@ -126,6 +126,7 @@ void zinfandel(
   float const scale = R0(ks.abs().maximum())();
   std::vector<long> srcs(n_src);
   std::iota(srcs.begin(), srcs.end(), 1);
+  log.info("Source indices: {}", fmt::join(srcs, ","));
   auto spoke_task = [&](long const spoke_lo, long const spoke_hi) {
     std::vector<long> spokes(n_cal_spoke);
     for (auto is = spoke_lo; is < spoke_hi; is++) {
@@ -136,14 +137,14 @@ void zinfandel(
           spokes.begin(),
           spokes.end(),
           std::clamp(is - n_cal_spoke / 2, 0L, total_spokes - n_cal_spoke));
-      auto const calS = GrabSources(ks, scale, srcs, gap_sz + 1, n_cal_read, spokes);
+      auto const calS = GrabSources(ks, scale, srcs, gap_sz, n_cal_read, spokes);
       auto const calT = GrabTargets(ks, scale, gap_sz, n_cal_read, spokes);
       auto const W = CalcWeights(calS, calT, lambda);
-      for (long ig = gap_sz; ig > 0; ig--) {
+      for (long ig = gap_sz - 1; ig >= 0; ig--) {
         auto const S = GrabSources(ks, scale, srcs, ig, 1, {is});
         Cx1 T = W.contract(S, Eigen::IndexPairList<Eigen::type2indexpair<1, 0>>())
                     .reshape(Sz1{ks.dimension(0)});
-        ks.chip(is, 2).chip(ig - 1, 1) = T * T.constant(scale);
+        ks.chip(is, 2).chip(ig, 1) = T * T.constant(scale);
       }
     }
   };
@@ -179,24 +180,29 @@ void zinfandel2(
       auto const calS = GrabSources(ks, scale, srcs, gap_sz + tgt_off, n_cal_read, spoke);
       auto const calT = GrabTargets(ks, scale, gap_sz + tgt_off, n_cal_read, spoke);
       auto const W = CalcWeights(calS, calT, lambda);
-      auto const S = GrabSources(ks, scale, srcs, gap_sz, 1, spoke);
+      auto const S = GrabSources(ks, scale, srcs, tgt_off, 1, spoke);
       Cx1 T = W.contract(S, Eigen::IndexPairList<Eigen::type2indexpair<1, 0>>())
                   .reshape(Sz1{ks.dimension(0)});
       ks.chip(is, 2).chip(tgt_off, 1) = T * T.constant(scale);
     }
   };
 
-  std::iota(srcs.begin(), srcs.end(), gap_sz);
-  log.info("Target index: {} Source indices: {}", 0, fmt::join(srcs, ","));
-  Threads::RangeFor(task, 0, total_spokes);
-  Cx1 const mean = ks.chip(0, 1).mean(Sz1{1});
-  ks.chip(0, 1).device(Threads::GlobalDevice()) =
-      mean.reshape(Sz2{n_chan, 1}).broadcast(Sz2{1, total_spokes});
-  for (long ig = 1; ig < gap_sz; ig++) {
+  // std::iota(srcs.begin(), srcs.end(), gap_sz);
+  // log.info("Target index: {} Source indices: {}", 0, fmt::join(srcs, ","));
+  // Threads::RangeFor(task, 0, total_spokes);
+  log.info("Averaging k0");
+  auto const k0cs = ks.chip(0, 1).cumsum(1);
+  long const win = 8;
+  ks.chip(0, 1).slice(Sz2{0, 0}, Sz2{n_chan, total_spokes - win}) =
+      (k0cs.slice(Sz2{0, win}, Sz2{n_chan, total_spokes - win}) -
+       k0cs.slice(Sz2{0, 0}, Sz2{n_chan, total_spokes - win})) /
+      k0cs.slice(Sz2{0, 0}, Sz2{n_chan, total_spokes - win}).constant(win);
+
+  for (long ig = gap_sz - 1; ig > 0; ig--) {
     tgt_off = ig;
     srcs[0] = -ig;
-    std::iota(srcs.begin() + 1, srcs.end(), gap_sz - ig);
-    log.info("Target index: {} Source indices: {}", 0, fmt::join(srcs, ","));
+    std::iota(srcs.begin() + 1, srcs.end(), 1);
+    log.info("Target index: {} Source indices: {}", ig, fmt::join(srcs, ","));
     Threads::RangeFor(task, total_spokes);
   }
 }
