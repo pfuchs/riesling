@@ -111,7 +111,6 @@ void zinfandel(
     long const n_cal_spoke,
     long const n_cal_read1,
     float const lambda,
-    R3 const &traj,
     Cx3 &ks,
     Log &log)
 {
@@ -157,7 +156,6 @@ void zinfandel2(
     long const n_src,
     long const n_cal_read1,
     float const lambda,
-    R3 const &traj,
     Cx3 &ks,
     Log &log)
 {

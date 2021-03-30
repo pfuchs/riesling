@@ -1,6 +1,7 @@
 #include "io_hd5.h"
 #include "io_nifti.h"
 #include "log.h"
+#include "mirin.h"
 #include "parse_args.h"
 #include "slab_correct.h"
 #include "threads.h"
@@ -29,6 +30,10 @@ int main_zinfandel(args::Subparser &parser)
   args::ValueFlag<float> rbw(
       parser, "BANDWIDTH", "Read-out bandwidth for slab profile correction (kHz)", {"rbw"}, 0.f);
   args::Flag twostep(parser, "TWOSTEP", "Use two step method", {"two", '2'});
+  args::Flag run_mirin(parser, "MIRIN", "Use MIRIN", {"mirin", 'm'});
+  args::ValueFlag<long> mirin_its(parser, "ITERATIONS", "MIRIN Iterations", {"its", 'i'}, 32);
+  args::ValueFlag<float> mirin_frac(
+      parser, "FRACTION", "MIRIN singular vectors fraction", {"frac", 'f'}, 0.25);
   Log log = ParseCommand(parser, fname);
 
   HD5Reader reader(fname.Get(), log);
@@ -50,10 +55,21 @@ int main_zinfandel(args::Subparser &parser)
   Cx3 rad_ks = info.noncartesianVolume();
   for (auto const &iv : WhichVolumes(volume.Get(), info.volumes)) {
     reader.readData(iv, rad_ks);
-    zinfandel(
-        gap_sz, src.Get(), spokes.Get(), read.Get(), twostep ? l1.Get() : 0.f, traj, rad_ks, log);
+    rad_ks.slice(Sz3{0, 0, 0}, Sz3{info.channels, gap_sz, info.spokes_total()})
+        .setZero(); // Ensure no rubbish
+    zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), twostep ? l1.Get() : 0.f, rad_ks, log);
     if (twostep) {
-      zinfandel2(gap_sz, src.Get(), read.Get(), l1.Get(), traj, rad_ks, log);
+      zinfandel2(gap_sz, src.Get(), read.Get(), l1.Get(), rad_ks, log);
+    } else if (run_mirin) {
+      mirin(
+          gap_sz,
+          src.Get(),
+          read.Get(),
+          spokes.Get(),
+          mirin_its.Get(),
+          mirin_frac.Get(),
+          rad_ks,
+          log);
     }
     if (pw && rbw) {
       slab_correct(out_info, pw.Get(), rbw.Get(), rad_ks, log);
