@@ -107,21 +107,13 @@ int main_phantom(args::Subparser &parser)
   if (log.level() >= Log::Level::Images) { // Extra check to avoid the shuffle when we can
     log.image(SwapToChannelLast(grid), "phantom-prefft.nii");
   }
+  cropper.crop4(grid) += sense * Tile(phan, grid_info.channels);
+  log.image(grid, "phantom-prefft.nii");
   log.info("FFT to k-space");
   fft.forward();
-  if (log.level() >= Log::Level::Images) { // Extra check to avoid the shuffle when we can
-    log.image(SwapToChannelLast(grid), "phantom-postfft.nii");
-  }
+  log.image(grid, "phantom-postfft.nii");
   Cx3 radial = grid_info.noncartesianVolume();
   gridder.toNoncartesian(grid, radial);
-  if (snr) {
-    Cx3 noise(grid_info.read_points, grid_info.spokes_total(), nchan.Get());
-    noise.setRandom<Eigen::internal::NormalRandomGenerator<std::complex<float>>>();
-    radial.slice(
-        Dims3{0, 0, 0},
-        Dims3{grid_info.channels, grid_info.read_points, grid_info.spokes_total()}) +=
-        noise * noise.constant(intensity.Get() / snr.Get());
-  }
 
   HD5Writer writer(std::filesystem::path(fname.Get()).replace_extension(".h5").string(), log);
   if (decimate) {
