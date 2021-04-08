@@ -71,6 +71,7 @@ Cx2 GrabTargets(
 Cx2 CalcWeights(Cx2 const &src, Cx2 const tgt, float const lambda)
 {
   Cx2 W(tgt.dimension(0), src.dimension(0));
+  W.setZero();
   Eigen::Map<Eigen::MatrixXcf const> srcM(src.data(), src.dimension(0), src.dimension(1));
   Eigen::Map<Eigen::MatrixXcf const> tgtM(tgt.data(), tgt.dimension(0), tgt.dimension(1));
   Eigen::Map<Eigen::MatrixXcf> Wm(W.data(), W.dimension(0), W.dimension(1));
@@ -141,8 +142,8 @@ void zinfandel(
       auto const W = CalcWeights(calS, calT, lambda);
       for (long ig = gap_sz - 1; ig >= 0; ig--) {
         auto const S = GrabSources(ks, scale, srcs, ig, 1, {is});
-        Cx1 T = W.contract(S, Eigen::IndexPairList<Eigen::type2indexpair<1, 0>>())
-                    .reshape(Sz1{ks.dimension(0)});
+        Cx1 const T = W.contract(S, Eigen::IndexPairList<Eigen::type2indexpair<1, 0>>())
+                          .reshape(Sz1{ks.dimension(0)});
         ks.chip(is, 2).chip(ig, 1) = T * T.constant(scale);
       }
     }
