@@ -115,6 +115,12 @@ int main_phantom(args::Subparser &parser)
   Cx3 radial = grid_info.noncartesianVolume();
   gridder.toNoncartesian(grid, radial);
 
+  if (snr) {
+    Cx3 noise = grid_info.noncartesianVolume();
+    noise.setRandom<Eigen::internal::NormalRandomGenerator<std::complex<float>>>();
+    radial += noise * noise.constant(intensity.Get() / snr.Get());
+  }
+
   HD5Writer writer(std::filesystem::path(fname.Get()).replace_extension(".h5").string(), log);
   if (decimate) {
     Info out_info{.matrix = Array3l{m, m, m},
