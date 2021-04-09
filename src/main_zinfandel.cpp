@@ -57,7 +57,7 @@ int main_zinfandel(args::Subparser &parser)
     reader.readData(iv, rad_ks);
     rad_ks.slice(Sz3{0, 0, 0}, Sz3{info.channels, gap_sz, info.spokes_total()})
         .setZero(); // Ensure no rubbish
-    zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), twostep ? l1.Get() : 0.f, rad_ks, log);
+    zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), twostep ? 0.f : l1.Get(), rad_ks, log);
     if (twostep) {
       zinfandel2(gap_sz, src.Get(), read.Get(), l1.Get(), rad_ks, log);
     } else if (run_mirin) {
