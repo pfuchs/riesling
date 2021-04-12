@@ -102,6 +102,8 @@ int main_phantom(args::Subparser &parser)
   // Generate SENSE maps and multiply
   log.info("Generating coil sensitivities...");
   Cx4 sense = birdcage(grid_info, coil_rings.Get(), coil_r.Get(), coil_r.Get() / 2.f, log);
+  R3 const rss = (sense * sense.conjugate()).real().sum(Sz1{0}).sqrt();
+  sense.device(Threads::GlobalDevice()) = sense / Tile(rss, grid_info.channels).cast<Cx>();
   log.info("Generating coil images...");
   cropper.crop4(grid).device(Threads::GlobalDevice()) = sense * Tile(phan, grid_info.channels);
   if (log.level() >= Log::Level::Images) { // Extra check to avoid the shuffle when we can
