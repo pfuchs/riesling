@@ -190,12 +190,14 @@ void zinfandel2(
   // log.info("Target index: {} Source indices: {}", 0, fmt::join(srcs, ","));
   // Threads::RangeFor(task, 0, total_spokes);
   log.info("Averaging k0");
-  auto const k0cs = ks.chip(0, 1).cumsum(1);
-  long const win = 8;
-  ks.chip(0, 1).slice(Sz2{0, 0}, Sz2{n_chan, total_spokes - win}) =
-      (k0cs.slice(Sz2{0, win}, Sz2{n_chan, total_spokes - win}) -
-       k0cs.slice(Sz2{0, 0}, Sz2{n_chan, total_spokes - win})) /
-      k0cs.slice(Sz2{0, 0}, Sz2{n_chan, total_spokes - win}).constant(win);
+  // auto const k0cs = ks.chip(0, 1).cumsum(1);
+  // long const win = 8;
+  // ks.chip(0, 1).slice(Sz2{0, 0}, Sz2{n_chan, total_spokes - win}) =
+  //     (k0cs.slice(Sz2{0, win}, Sz2{n_chan, total_spokes - win}) -
+  //      k0cs.slice(Sz2{0, 0}, Sz2{n_chan, total_spokes - win})) /
+  //     k0cs.slice(Sz2{0, 0}, Sz2{n_chan, total_spokes - win}).constant(win);
+  Cx1 avg = ks.chip(0, 1).mean(Sz1{1});
+  ks.chip(0, 1) = avg.reshape(Sz2{n_chan, 1}).broadcast(Sz2{1, total_spokes});
 
   for (long ig = gap_sz - 1; ig > 0; ig--) {
     tgt_off = ig;
