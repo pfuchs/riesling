@@ -2,14 +2,15 @@
 
 #include "apodizer.h"
 #include "cropper.h"
-#include "espirit.h"
 #include "fft3n.h"
 #include "filter.h"
 #include "gridder.h"
 #include "io_hd5.h"
 #include "io_nifti.h"
 #include "log.h"
+#include "mirin.h"
 #include "parse_args.h"
+#include "pinot.h"
 #include "sense.h"
 
 int main_sense(args::Subparser &parser)
@@ -25,17 +26,6 @@ int main_sense(args::Subparser &parser)
   args::Flag save_kernels(parser, "KERNELS", "Write out k-space kernels", {"kernels", 'k'});
   args::Flag save_channels(
       parser, "CHANNELS", "Write out individual channel images", {"channels", 'c'});
-  args::Flag espirit(parser, "ESPIRIT", "Use ESPIRIT", {"espirit"});
-  args::ValueFlag<long> kernelSz(
-      parser, "KERNEL SIZE", "ESPIRIT Kernel size (default 6)", {"kernel"}, 6);
-  args::ValueFlag<long> calSz(
-      parser, "CAL SIZE", "ESPIRIT Calibration region size (default 32)", {"cal"}, 32);
-  args::ValueFlag<float> retain(
-      parser,
-      "RETAIN",
-      "ESPIRIT Fraction of singular vectors to retain (default 0.25)",
-      {"retain"},
-      0.25);
 
   Log log = ParseCommand(parser, fname);
   FFT::Start(log);
@@ -55,26 +45,8 @@ int main_sense(args::Subparser &parser)
   Cx3 rad_ks = info.noncartesianVolume();
   long currentVolume = SenseVolume(sense_vol, info.volumes);
   reader.readNoncartesian(currentVolume, rad_ks);
-  Cx4 sense = espirit ? cropper.crop4(ESPIRIT(
-                            info,
-                            trajectory,
-                            osamp.Get(),
-                            kernel,
-                            calSz.Get(),
-                            kernelSz.Get(),
-                            retain.Get(),
-                            rad_ks,
-                            log))
-                      : cropper.crop4(SENSE(
-                            info,
-                            trajectory,
-                            osamp.Get(),
-                            kernel,
-                            false,
-                            sdc.Get(),
-                            thresh.Get(),
-                            rad_ks,
-                            log));
+  Cx4 sense = cropper.crop4(
+      SENSE(info, trajectory, osamp.Get(), kernel, false, sdc.Get(), thresh.Get(), rad_ks, log));
   if (save_maps) {
     WriteNifti(
         info,

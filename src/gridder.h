@@ -36,6 +36,7 @@ struct Gridder
   Dims3 gridDims() const; //!< Returns the dimensions of the grid
   Cx4 newGrid() const;    //!< Returns a correctly sized multi-channel grid
   Cx3 newGrid1() const;   //!< Returns a correctly sized single channel grid
+  long maxRead() const;   //!< Return the maximum read index which will be accessed
 
   void setSDCExponent(float const dce); //!< Sets the exponent of the density compensation weights
   void setSDC(float const dc);
@@ -80,6 +81,7 @@ protected:
   Info const info_;
   std::vector<Coords> coords_;
   std::vector<int32_t> sortedIndices_;
+  long maxRadInd_;
   Dims3 dims_;
   float oversample_, DCexp_;
   Kernel *kernel_;

@@ -37,12 +37,15 @@ void Log::vfail(fmt::string_view fstr, fmt::format_args args) const
 
 void Log::progress(long const ii, long const n) const
 {
-  if ((out_level_ >= Level::Info)) {
+  if ((out_level_ >= Level::Debug && out_level_ != Level::NoProg)) {
     constexpr long steps = 10;
     long const step = n / steps;
     if (ii % step == 0) {
       float progress = (100.f * ii) / n;
-      fmt::print(stderr, FMT_STRING("{:.0f}%\n"), progress);
+      fmt::print(stderr, FMT_STRING("{:.0f}% "), progress);
+    }
+    if (ii == (n - 1)) {
+      fmt::print(stderr, "\n");
     }
   }
 }

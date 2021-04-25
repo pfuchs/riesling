@@ -69,6 +69,7 @@ Gridder::Gridder(
       maxRad);
 
   auto const hires = spokeInfo(traj.chip(info_.spokes_lo, 2), nomRad, maxRad, 1.f);
+  maxRadInd_ = hires.hi;
   log_.info(FMT_STRING("Hi-res spokes using points {}-{}"), hires.lo, hires.hi);
   coords_ = genCoords(traj, info_.spokes_lo, info_.spokes_hi, hires);
   if (info_.spokes_lo) {
@@ -98,6 +99,11 @@ Gridder::spokeInfo(R2 const &traj, long const nomRad, float const maxRad, float 
     }
   }
   return s;
+}
+
+long Gridder::maxRead() const
+{
+  return maxRadInd_;
 }
 
 std::vector<Gridder::Coords>
@@ -214,6 +220,7 @@ void Gridder::toCartesian(Cx2 const &noncart, Cx3 &cart) const
   };
 
   auto const &start = log_.now();
+  cart.setZero();
   Threads::RangeFor(grid_task, sortedIndices_.size());
   log_.debug("Non-cart -> Cart: {}", log_.toNow(start));
 }
@@ -252,6 +259,7 @@ void Gridder::toCartesian(Cx3 const &noncart, Cx4 &cart) const
   };
 
   auto const &start = log_.now();
+  cart.setZero();
   Threads::RangeFor(grid_task, sortedIndices_.size());
   log_.debug("Non-cart -> Cart: {}", log_.toNow(start));
 }
@@ -287,6 +295,7 @@ void Gridder::toNoncartesian(Cx3 const &cart, Cx2 &noncart) const
     }
   };
   auto const &start = log_.now();
+  noncart.setZero();
   Threads::RangeFor(grid_task, coords_.size());
   log_.debug("Cart -> Non-cart: {}", log_.toNow(start));
 }
@@ -323,6 +332,7 @@ void Gridder::toNoncartesian(Cx4 const &cart, Cx3 &noncart) const
     }
   };
   auto const &start = log_.now();
+  noncart.setZero();
   Threads::RangeFor(grid_task, coords_.size());
   log_.debug("Cart -> Non-cart: {}", log_.toNow(start));
 }

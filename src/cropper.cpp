@@ -44,6 +44,16 @@ Cropper::Cropper(Dims3 const &fullSz, Sz3 const &cropSz, Log &log)
   log.debug(FMT_STRING("Cropper start {} size {}"), st_, sz_);
 }
 
+Cropper::Cropper(Sz3 const &fullSz, Sz3 const &cropSz, Log &log)
+{
+  sz_[0] = cropSz[0];
+  sz_[1] = cropSz[1];
+  sz_[2] = cropSz[2];
+  Dims3 full{fullSz[0], fullSz[1], fullSz[2]};
+  calcStart(full);
+  log.debug(FMT_STRING("Cropper start {} size {}"), st_, sz_);
+}
+
 void Cropper::calcStart(Dims3 const &fullSz)
 {
   // After truncation the -1 makes even and odd sizes line up the way we want

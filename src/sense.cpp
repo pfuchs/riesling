@@ -30,6 +30,7 @@ Cx4 SENSE(
   rss.setZero();
   gridder.toCartesian(data, grid);
   fftN.reverse();
+  log.image(grid, "sense-raw-channels.nii");
   rss.device(Threads::GlobalDevice()) = (grid * grid.conjugate()).real().sum(Sz1{0}).sqrt();
   log.info("Normalizing channel images");
   if (threshold > 0) {

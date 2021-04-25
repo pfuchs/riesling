@@ -26,7 +26,6 @@ add_compile_definitions(EIGEN_USE_THREADS)
 # Common library between tests and main executable
 add_library(vineyard
     src/apodizer.cpp
-    src/cg.cpp
     src/coils.cpp
     src/compressor.cpp
     src/cropper.cpp
@@ -43,10 +42,12 @@ add_library(vineyard
     src/kernel_kb.cpp
     src/kernel_nn.cpp
     src/log.cpp
+    src/mirin.cpp
     src/padder.cpp
+    src/parse_args.cpp
     src/phantom_sphere.cpp
     src/phantom_shepplogan.cpp
-    src/parse_args.cpp
+    src/pinot.cpp
     src/sdc.cpp
     src/sense.cpp
     src/slab_correct.cpp

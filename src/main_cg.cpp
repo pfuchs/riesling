@@ -1,7 +1,7 @@
 #include "types.h"
 
 #include "apodizer.h"
-#include "cg.h"
+#include "cg.hpp"
 #include "cropper.h"
 #include "fft3n.h"
 #include "filter.h"
@@ -57,7 +57,7 @@ int main_cg(args::Subparser &parser)
   transfer.setZero();
   gridder.toCartesian(ones, transfer);
 
-  CgSystem toe = [&](Cx3 const &x, Cx3 &y) {
+  CG<3>::SysFunc toe = [&](Cx3 const &x, Cx3 &y) {
     auto const start = log.now();
     grid.device(Threads::GlobalDevice()) = grid.constant(0.f);
     iter_cropper.crop4(grid).device(Threads::GlobalDevice()) = sense * Tile(x, info.channels);
@@ -68,7 +68,7 @@ int main_cg(args::Subparser &parser)
     log.debug("System: {}", log.toNow(start));
   };
 
-  DecodeFunction dec = [&](Cx3 const &x, Cx3 &y) {
+  auto dec = [&](Cx3 const &x, Cx3 &y) {
     auto const &start = log.now();
     y.setZero();
     grid.setZero();
@@ -91,7 +91,7 @@ int main_cg(args::Subparser &parser)
       currentVolume = iv;
     }
     dec(rad_ks, vol); // Initialize
-    cg(toe, thr.Get(), its.Get(), vol, log);
+    CG<3>::Run(toe, thr.Get(), its.Get(), vol, log);
     cropped = out_cropper.crop3(vol);
     apodizer.deapodize(cropped);
     if (tukey_s || tukey_e || tukey_h) {

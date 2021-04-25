@@ -1,7 +1,7 @@
 #include "types.h"
 
 #include "apodizer.h"
-#include "cg.h"
+#include "cgvar.hpp"
 #include "cropper.h"
 #include "fft3n.h"
 #include "filter.h"
@@ -60,7 +60,7 @@ int main_cgvar(args::Subparser &parser)
   Cx3 transfer(gridder.gridDims());
 
   auto dev = Threads::GlobalDevice();
-  CgVarSystem sys = [&](Cx3 const &x, Cx3 &y, float const pre) {
+  CGVar<3>::SysFunc sys = [&](Cx3 const &x, Cx3 &y, float const pre) {
     auto const start = log.now();
     gridder.setSDCExponent(pre);
     transfer.device(dev) = transfer.constant(0.f);
@@ -76,7 +76,7 @@ int main_cgvar(args::Subparser &parser)
     log.debug("System: {}", log.toNow(start));
   };
 
-  DecodeFunction dec = [&](Cx3 const &x, Cx3 &y) {
+  auto dec = [&](Cx3 const &x, Cx3 &y) {
     auto const &start = log.now();
     y.device(dev) = y.constant(0.f);
     gridder.setSDCExponent(1.f);
@@ -100,7 +100,7 @@ int main_cgvar(args::Subparser &parser)
       currentVolume = iv;
     }
     dec(rad_ks, vol); // Initialize
-    cgvar(sys, thr.Get(), its.Get(), pre0.Get(), pre1.Get(), vol, log);
+    CGVar<3>::Run(sys, thr.Get(), its.Get(), pre0.Get(), pre1.Get(), vol, log);
     cropped = out_cropper.crop3(vol);
     apodizer.deapodize(cropped);
     if (tukey_s || tukey_e || tukey_h) {

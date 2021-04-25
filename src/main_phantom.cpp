@@ -106,20 +106,23 @@ int main_phantom(args::Subparser &parser)
   // Generate SENSE maps and multiply
   log.info("Generating coil sensitivities...");
   Cx4 sense = birdcage(grid_info, coil_rings.Get(), coil_r.Get(), coil_r.Get(), log);
+  R3 const rss = (sense * sense.conjugate()).real().sum(Sz1{0}).sqrt();
+  sense.device(Threads::GlobalDevice()) = sense / Tile(rss, grid_info.channels).cast<Cx>();
   log.info("Generating coil images...");
   cropper.crop4(grid).device(Threads::GlobalDevice()) = sense * Tile(phan, grid_info.channels);
   if (log.level() >= Log::Level::Images) { // Extra check to avoid the shuffle when we can
     log.image(SwapToChannelLast(grid), "phantom-prefft.nii");
   }
+  cropper.crop4(grid) += sense * Tile(phan, grid_info.channels);
+  log.image(grid, "phantom-prefft.nii");
   log.info("FFT to k-space");
   fft.forward();
-  if (log.level() >= Log::Level::Images) { // Extra check to avoid the shuffle when we can
-    log.image(SwapToChannelLast(grid), "phantom-postfft.nii");
-  }
+  log.image(grid, "phantom-postfft.nii");
   Cx3 radial = grid_info.noncartesianVolume();
   gridder.toNoncartesian(grid, radial);
+
   if (snr) {
-    Cx3 noise(radial.dimensions());
+    Cx3 noise = grid_info.noncartesianVolume();
     noise.setRandom<Eigen::internal::NormalRandomGenerator<std::complex<float>>>();
     radial += noise * noise.constant(intensity.Get() / snr.Get());
   }

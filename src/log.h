@@ -13,7 +13,8 @@ struct Log
     Fail = 0,
     Info = 1,
     Images = 2,
-    Debug = 3
+    NoProg = 3,
+    Debug = 4
   };
 
   using Time = std::chrono::high_resolution_clock::time_point;

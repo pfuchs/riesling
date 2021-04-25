@@ -24,12 +24,14 @@ TEST_CASE("ZINFANDEL Data mangling", "[ZINFANDEL]")
   SECTION("Grab Sources")
   {
     long const n_src = 4;
+    std::vector<long> srcs(n_src);
+    std::iota(srcs.begin(), srcs.end(), 0);
     long const n_read = 4;
-    auto const S = GrabSources(kspace, scale, n_src, 0, n_read, {0});
-    CHECK(S.rows() == (n_coil * n_src));
-    CHECK(S.cols() == n_read);
-    CHECK((S.array().real() > 0.).all());
-    CHECK(S(0, 0).real() == Approx(1. / scale));
+    auto const S = GrabSources(kspace, scale, srcs, 0, n_read, {0});
+    CHECK(S.dimension(0) == (n_coil * n_src));
+    CHECK(S.dimension(1) == n_read);
+    CHECK(B0((S.real() > S.real().constant(0.f)).all())());
+    CHECK(S(0, 0).real() == Approx(1.f / scale));
     CHECK(
         S((n_coil * n_src) - 1, n_read - 1).real() ==
         Approx((n_read - 1 + n_src - 1 + n_coil - 1 + 1) / scale));
@@ -39,10 +41,10 @@ TEST_CASE("ZINFANDEL Data mangling", "[ZINFANDEL]")
   {
     long const n_read = 4;
     auto const T = GrabTargets(kspace, scale, 0, n_read, {0});
-    CHECK(T.rows() == n_coil);
-    CHECK(T.cols() == n_read);
-    CHECK((T.array().real() > 0.).all());
-    CHECK(T(0, 0).real() == Approx(1. / scale));
+    CHECK(T.dimension(0) == n_coil);
+    CHECK(T.dimension(1) == n_read);
+    CHECK(B0((T.real() > T.real().constant(0.f)).all())());
+    CHECK(T(0, 0).real() == Approx(1.f / scale));
     CHECK(T(n_coil - 1, n_read - 1).real() == Approx((n_read + n_coil - 1) / scale));
   }
 }
@@ -62,24 +64,13 @@ TEST_CASE("ZINFANDEL Algorithm", "[ZINFANDEL]")
       }
     }
   }
-  R3 traj(3, n_read, n_spoke);
-  traj.setZero();
-  for (auto is = 0; is < n_spoke; is++) {
-    R1 endPoint(3);
-    endPoint(0) = 0.f;
-    endPoint(1) = cos(is * M_PI / n_spoke);
-    endPoint(2) = sin(is * M_PI / n_spoke);
-    for (auto ir = 0; ir < n_read; ir++) {
-      traj.chip(is, 2).chip(ir, 1) = endPoint * (1.f * ir / n_read);
-    }
-  }
 
   SECTION("Run")
   {
     long const n_gap = 2;
     Cx3 test_kspace = kspace;
     test_kspace.slice(Sz3{0, 0, 0}, Sz3{n_coil, n_gap, n_spoke}).setZero();
-    zinfandel(n_gap, 2, 1, 4, 0.0, traj, test_kspace, log);
+    zinfandel(n_gap, 2, 1, 4, 0.0, test_kspace, log);
     Cx3 diff = test_kspace.slice(Sz3{0, 0, 0}, Sz3{n_coil, n_gap, n_spoke}) -
                kspace.slice(Sz3{0, 0, 0}, Sz3{n_coil, n_gap, n_spoke});
     float const sum_diff = Norm(diff) / diff.size();

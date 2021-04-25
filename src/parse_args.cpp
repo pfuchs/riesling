@@ -8,8 +8,11 @@
 #include <scn/scn.h>
 
 namespace {
-std::unordered_map<int, Log::Level> levelMap{
-    {0, Log::Level::Fail}, {1, Log::Level::Info}, {2, Log::Level::Images}, {3, Log::Level::Debug}};
+std::unordered_map<int, Log::Level> levelMap{{0, Log::Level::Fail},
+                                             {1, Log::Level::Info},
+                                             {2, Log::Level::Images},
+                                             {3, Log::Level::NoProg},
+                                             {4, Log::Level::Debug}};
 } // namespace
 
 void Vector3fReader::operator()(

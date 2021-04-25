@@ -10,27 +10,34 @@
 void zinfandel(
     long const gap_sz,
     long const n_src,
-    long const n_spoke,
-    long const n_read,
+    long const n_cal_spoke,
+    long const n_cal_read,
     float const lambda,
-    R3 const &traj,
+    Cx3 &ks,
+    Log &log);
+
+void zinfandel2(
+    long const gap_sz,
+    long const n_src,
+    long const n_cal_read,
+    float const lambda,
     Cx3 &ks,
     Log &log);
 
 /*!
  *  Helper functions exposed for testing
  */
-Eigen::MatrixXcf GrabSources(
+Cx2 GrabSources(
     Cx3 const &ks,
     float const scale,
-    long const n_src,
-    long const s_read,
-    long const n_read,
+    std::vector<long> const &src_offsets,
+    long const st_cal_read,
+    long const n_cal_read,
     std::vector<long> const &spokes);
 
-Eigen::MatrixXcf GrabTargets(
+Cx2 GrabTargets(
     Cx3 const &ks,
     float const scale,
-    long const s_read,
-    long const n_read,
+    long const st_tgt_read,
+    long const n_tgt_read,
     std::vector<long> const &spokes);

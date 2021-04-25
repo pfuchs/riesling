@@ -1,7 +1,10 @@
 #include "io_hd5.h"
 #include "io_nifti.h"
+#include "kernels.h"
 #include "log.h"
+#include "mirin.h"
 #include "parse_args.h"
+#include "pinot.h"
 #include "slab_correct.h"
 #include "threads.h"
 #include "types.h"
@@ -10,10 +13,8 @@
 
 int main_zinfandel(args::Subparser &parser)
 {
-  args::Positional<std::string> fname(parser, "INPUT FILE", "Input radial k-space to fill");
-  args::ValueFlag<std::string> oname(
-      parser, "OUTPUT NAME", "Name of output .h5 file", {"out", 'o'});
-  args::ValueFlag<long> volume(parser, "VOLUME", "Only recon this volume", {"vol"}, -1);
+  COMMON_RECON_ARGS;
+
   args::ValueFlag<long> gap(
       parser, "DEAD-TIME GAP", "Set gap value (default use header value)", {'g', "gap"}, -1);
   args::ValueFlag<long> src(
@@ -28,10 +29,26 @@ int main_zinfandel(args::Subparser &parser)
       parser, "PULSE WIDTH", "Pulse-width for slab profile correction", {"pw"}, 0.f);
   args::ValueFlag<float> rbw(
       parser, "BANDWIDTH", "Read-out bandwidth for slab profile correction (kHz)", {"rbw"}, 0.f);
+  args::Flag twostep(parser, "TWOSTEP", "Use two step method", {"two", '2'});
+  args::Flag pinot(parser, "PINOT", "Use PINOT", {"pinot"});
+  args::Flag mirin(parser, "MIRIN", "Use MIRIN", {"mirin"});
+  args::ValueFlag<long> kernelSz(
+      parser, "KERNEL SIZE", "Mirin Kernel size (default 7)", {"kernel"}, 7);
+  args::ValueFlag<long> calSz(
+      parser, "CAL SIZE", "MIRIN Calibration region size (default 31)", {"cal"}, 25);
+  args::ValueFlag<long> its(parser, "ITERATIONS", "Maximum iterations", {"its"});
+  args::ValueFlag<float> retain(
+      parser,
+      "RETAIN",
+      "MIRIN Fraction of singular vectors to retain (default 0.25)",
+      {"retain"},
+      0.25);
+
   Log log = ParseCommand(parser, fname);
 
   HD5::Reader reader(fname.Get(), log);
   auto info = reader.info();
+  auto const trajectory = reader.readTrajectory();
   long const gap_sz = gap ? gap.Get() : info.read_gap;
   R3 traj = reader.readTrajectory();
 
@@ -50,7 +67,33 @@ int main_zinfandel(args::Subparser &parser)
   reader.readNoncartesian(rad_ks);
   for (auto const &iv : WhichVolumes(volume.Get(), info.volumes)) {
     Cx3 vol = rad_ks.chip(iv, 3);
-    zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), l1.Get(), traj, vol, log);
+    rad_ks.slice(Sz3{0, 0, 0}, Sz3{info.channels, gap_sz, info.spokes_total()})
+        .setZero(); // Ensure no rubbish
+    if (twostep) {
+      zinfandel2(gap_sz, src.Get(), read.Get(), l1.Get(), rad_ks, log);
+    } else if (mirin) {
+      Kernel *kernel =
+          kb ? (Kernel *)new KaiserBessel(3, osamp.Get(), (info.type == Info::Type::ThreeD))
+             : (Kernel *)new NearestNeighbour();
+      MIRIN(
+          info,
+          trajectory,
+          osamp.Get(),
+          kernel,
+          calSz.Get(),
+          kernelSz.Get(),
+          its.Get(),
+          retain.Get(),
+          rad_ks,
+          log);
+    } else if (pinot) {
+      Kernel *kernel =
+          kb ? (Kernel *)new KaiserBessel(3, osamp.Get(), (info.type == Info::Type::ThreeD))
+             : (Kernel *)new NearestNeighbour();
+      PINOT(info, trajectory, osamp.Get(), kernel, rad_ks, log);
+    } else {
+      zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), l1.Get(), rad_ks, log);
+    }
     if (pw && rbw) {
       slab_correct(out_info, pw.Get(), rbw.Get(), vol, log);
     }
