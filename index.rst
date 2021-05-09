@@ -10,7 +10,7 @@ Welcome to RIESLING's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   docs/Contents
+   docs/contents
 
 Indices and tables
 ==================
