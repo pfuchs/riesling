@@ -12,25 +12,25 @@ To be considered valid RIESLING input, the HDF5 file must contain the header inf
 
 .. code-block:: c
 
-struct Info {
-  long type;
-  long channels;
-  long matrix[3];
+  struct Info {
+    long type;
+    long channels;
+    long matrix[3];
 
-  long read_points;
-  long read_gap;
-  long spokes_hi;
-  long spokes_lo;
-  float lo_scale;
+    long read_points;
+    long read_gap;
+    long spokes_hi;
+    long spokes_lo;
+    float lo_scale;
 
-  long volumes;
-  long echoes;
+    long volumes;
+    long echoes;
 
-  float tr;
-  float voxel_size[3];
-  float origin[3];
-  float direction[3][3];
-};
+    float tr;
+    float voxel_size[3];
+    float origin[3];
+    float direction[3][3];
+  };
 
 `type` defines the kind of acquisition. Currently two values are supported - 1 means the acquisition is fully 3D, while 2 means the acquisition is a 3D stack-of-stars or stack-of-spirals type acquisition, with cartesian phase-encoding blips for the third axis. `channels` defines the number of k-space channels / coil-elements. `matrix` defines the nominal matrix size for the scan - i.e. it determines the matrix size of the final reconstructed image.
 
