@@ -3,8 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to RIESLING's documentation!
+Welcome to RIESLING!
 ====================================
+
+.. image:: riesling-logo.png
+   :alt: RIESLING Logo
+
+RIESLING is a reconstruction toolbox tuned for 3D radial MRI - the name stands for Radial Interstices Enable Speedy Low-volume imagING - but it can process other trajectories as well.
 
 .. toctree::
    :maxdepth: 2
