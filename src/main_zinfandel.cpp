@@ -33,16 +33,16 @@ int main_zinfandel(args::Subparser &parser)
   args::Flag pinot(parser, "PINOT", "Use PINOT", {"pinot"});
   args::Flag mirin(parser, "MIRIN", "Use MIRIN", {"mirin"});
   args::ValueFlag<long> kernelSz(
-      parser, "KERNEL SIZE", "Mirin Kernel size (default 7)", {"kernel"}, 7);
+      parser, "KERNEL SIZE", "Mirin Kernel size (default 5)", {"kernel"}, 5);
   args::ValueFlag<long> calSz(
-      parser, "CAL SIZE", "MIRIN Calibration region size (default 31)", {"cal"}, 25);
-  args::ValueFlag<long> its(parser, "ITERATIONS", "Maximum iterations", {"its"});
-  args::ValueFlag<float> retain(
+      parser, "CAL SIZE", "MIRIN Calibration region radius (default 16)", {"cal"}, 16);
+  args::ValueFlag<long> its(parser, "ITERATIONS", "Maximum iterations", {"its"}, 4);
+  args::ValueFlag<long> retain(
       parser,
       "RETAIN",
-      "MIRIN Fraction of singular vectors to retain (default 0.25)",
+      "MIRIN Singular vectors per channel to retain (default 16)",
       {"retain"},
-      0.25);
+      16);
 
   Log log = ParseCommand(parser, fname);
 
@@ -67,10 +67,10 @@ int main_zinfandel(args::Subparser &parser)
   reader.readNoncartesian(rad_ks);
   for (auto const &iv : WhichVolumes(volume.Get(), info.volumes)) {
     Cx3 vol = rad_ks.chip(iv, 3);
-    rad_ks.slice(Sz3{0, 0, 0}, Sz3{info.channels, gap_sz, info.spokes_total()})
+    vol.slice(Sz3{0, 0, 0}, Sz3{info.channels, gap_sz, info.spokes_total()})
         .setZero(); // Ensure no rubbish
     if (twostep) {
-      zinfandel2(gap_sz, src.Get(), read.Get(), l1.Get(), rad_ks, log);
+      zinfandel2(gap_sz, src.Get(), read.Get(), l1.Get(), vol, log);
     } else if (mirin) {
       Kernel *kernel =
           kb ? (Kernel *)new KaiserBessel(3, osamp.Get(), (info.type == Info::Type::ThreeD))
@@ -80,24 +80,25 @@ int main_zinfandel(args::Subparser &parser)
           trajectory,
           osamp.Get(),
           kernel,
+          sdc.Get(),
           calSz.Get(),
           kernelSz.Get(),
           its.Get(),
           retain.Get(),
-          rad_ks,
+          vol,
           log);
     } else if (pinot) {
       Kernel *kernel =
           kb ? (Kernel *)new KaiserBessel(3, osamp.Get(), (info.type == Info::Type::ThreeD))
              : (Kernel *)new NearestNeighbour();
-      PINOT(info, trajectory, osamp.Get(), kernel, rad_ks, log);
+      PINOT(info, trajectory, osamp.Get(), kernel, vol, log);
     } else {
-      zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), l1.Get(), rad_ks, log);
+      zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), l1.Get(), vol, log);
     }
     if (pw && rbw) {
       slab_correct(out_info, pw.Get(), rbw.Get(), vol, log);
     }
-    rad_ks.chip(iv, 3);
+    rad_ks.chip(iv, 3) = vol;
   }
   writer.writeNoncartesian(rad_ks);
   log.info("Finished");

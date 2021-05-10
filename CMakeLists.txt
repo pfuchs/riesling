@@ -29,7 +29,6 @@ add_library(vineyard
     src/coils.cpp
     src/compressor.cpp
     src/cropper.cpp
-    src/espirit.cpp
     src/fft1.cpp
     src/fft3.cpp
     src/fft3n.cpp
@@ -42,6 +41,7 @@ add_library(vineyard
     src/kernel_kb.cpp
     src/kernel_nn.cpp
     src/log.cpp
+    src/lowrank.cpp
     src/mirin.cpp
     src/padder.cpp
     src/parse_args.cpp

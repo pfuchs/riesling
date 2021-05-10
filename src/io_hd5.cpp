@@ -25,7 +25,7 @@ void Init(Log &log)
     // void *old_client_data;
     // hid_t errorStack;
     // err = H5Eget_auto(H5E_DEFAULT, &old_func, &old_client_data);
-    // err = H5Eset_auto(H5E_DEFAULT, nullptr, nullptr);
+    err = H5Eset_auto(H5E_DEFAULT, nullptr, nullptr);
     if (err < 0) {
       log.fail("Could not initialise HDF5, code: {}", err);
     }
@@ -182,11 +182,14 @@ herr_t AddName(hid_t id, const char *name, const H5L_info_t *linfo, void *opdata
 
 std::map<std::string, float> Reader::readMeta() const
 {
+  std::map<std::string, float> meta;
   auto meta_group = H5Gopen(handle_, KeyMeta.c_str(), H5P_DEFAULT);
+  if (meta_group < 0) { // No meta-information
+    return meta;
+  }
   std::vector<std::string> names;
   H5Literate(meta_group, H5_INDEX_NAME, H5_ITER_INC, NULL, AddName, &names);
 
-  std::map<std::string, float> meta;
   herr_t status = 0;
   for (auto const &name : names) {
     hid_t const dset = H5Dopen(meta_group, name.c_str(), H5P_DEFAULT);

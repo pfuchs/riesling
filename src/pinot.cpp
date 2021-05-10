@@ -25,8 +25,8 @@ void PINOT(
   info.read_gap = 0;
 
   Cx3 data = in_data;
-  Gridder gridder(info, traj, os, SDC::Pipe, kernel, log, sense_res, true);
-  gridder.setDCExponent(0.8f);
+  Gridder gridder(info, traj, os, kernel, log, sense_res, true);
+  gridder.setSDCExponent(0.8f);
   Cx4 grid = gridder.newGrid();
   FFT3N fft(grid, log);
   grid.setZero();
