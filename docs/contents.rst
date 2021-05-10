@@ -1,4 +1,4 @@
-Categories
+Contents
 ----------
 
 .. toctree::
@@ -7,4 +7,4 @@ Categories
    util
    recon
    data
-   dev
+   contrib
