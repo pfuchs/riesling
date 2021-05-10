@@ -60,8 +60,7 @@ int main_cg(args::Subparser &parser)
   CgSystem toe = [&](Cx3 const &x, Cx3 &y) {
     auto const start = log.now();
     grid.device(Threads::GlobalDevice()) = grid.constant(0.f);
-    y = x;
-    iter_cropper.crop4(grid).device(Threads::GlobalDevice()) = sense * Tile(y, info.channels);
+    iter_cropper.crop4(grid).device(Threads::GlobalDevice()) = sense * Tile(x, info.channels);
     fft.forward();
     grid.device(Threads::GlobalDevice()) = grid * Tile(transfer, info.channels);
     fft.reverse();
