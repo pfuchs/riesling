@@ -46,7 +46,9 @@ R2 Pipe(Info const &info, Gridder &gridder, Kernel *kernel, Log &log)
     gridder.toNoncartesian(temp, Wp);
     Wp.device(Threads::GlobalDevice()) =
         (Wp.real() > 0.f).select(W / Wp, W); // Avoid divide by zero problems
-    float const delta = Norm(Wp - W) / W.size();
+    Cx2 const diff =
+        (Wp - W).slice(Sz2{info.read_gap, 0}, Sz2{gridder.maxRead(), info.spokes_total()});
+    float const delta = Norm(diff) / diff.size();
     W.device(Threads::GlobalDevice()) = Wp;
     if (delta < 1.e-4) {
       log.info("SDC converged, delta was {}", delta);

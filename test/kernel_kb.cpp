@@ -6,8 +6,9 @@
 
 TEST_CASE("3x3", "[KB3]")
 {
+  Log log;
   long const sz = 3;
-  KaiserBessel kernel(sz, 1);
+  KaiserBessel kernel(sz, 1, true, log);
   Log nullLog;
   Cx3 temp(sz, sz, sz);
   FFT3 fft(temp, nullLog);

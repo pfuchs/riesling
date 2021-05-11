@@ -7,6 +7,6 @@ Eigen::MatrixXcf LowRank(Eigen::Map<Eigen::MatrixXcf> const &m, long const nReta
   auto const svd = m.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
   Eigen::VectorXf const vals = svd.singularValues();
   Eigen::MatrixXcf const lr = svd.matrixU().leftCols(nRetain) * vals.head(nRetain).asDiagonal() *
-                              svd.matrixV().adjoint().leftCols(nRetain);
+                              svd.matrixV().leftCols(nRetain).adjoint();
   return lr;
 }

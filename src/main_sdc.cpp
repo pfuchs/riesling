@@ -28,9 +28,9 @@ int main_sdc(args::Subparser &parser)
   R2 sdc;
   switch (type.Get()) {
   case Type::Pipe: {
-    Kernel *kernel =
-        kb ? (Kernel *)new KaiserBessel(3, osamp.Get(), (info.type == Info::Type::ThreeD))
-           : (Kernel *)new NearestNeighbour();
+    Kernel *kernel = kb ? (Kernel *)new KaiserBessel(
+                              kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD), log)
+                        : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1, log);
     Gridder gridder(info, trajectory, osamp.Get(), kernel, log);
     sdc = SDC::Pipe(info, gridder, kernel, log);
   } break;

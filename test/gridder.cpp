@@ -20,7 +20,7 @@ TEST_CASE("Gridder with single point", "GRID-SINGLE")
 
   SECTION("NN")
   {
-    Kernel *kernel = new NearestNeighbour();
+    Kernel *kernel = new NearestNeighbour(1, log);
     Gridder gridder(info, traj, osamp, kernel, log);
     Cx2 rad(info.read_points, info.spokes_total());
     CHECK(rad.dimension(0) == 1);
@@ -39,7 +39,7 @@ TEST_CASE("Gridder with single point", "GRID-SINGLE")
 
   SECTION("NN Multicoil")
   {
-    Kernel *kernel = new NearestNeighbour();
+    Kernel *kernel = new NearestNeighbour(1, log);
     Gridder gridder(info, traj, osamp, kernel, log);
     Cx3 rad = info.noncartesianVolume();
     CHECK(rad.dimension(0) == info.channels);
@@ -65,7 +65,7 @@ TEST_CASE("Gridder with single point", "GRID-SINGLE")
 
   SECTION("KB Multicoil")
   {
-    Kernel *kernel = new KaiserBessel(3, osamp, true);
+    Kernel *kernel = new KaiserBessel(3, osamp, true, log);
     Gridder gridder(info, traj, osamp, kernel, log);
     Cx3 rad = info.noncartesianVolume();
     CHECK(rad.dimension(0) == info.channels);
@@ -95,13 +95,16 @@ TEST_CASE("Gridder with single spoke", "GRID-SPOKE")
   // Run tests single-thread due to low point count
   Threads::SetGlobalThreadCount(1);
   Log log;
-  Info info{.matrix = {4, 4, 4},
-            .read_points = 4,
-            .read_gap = 0,
-            .spokes_hi = 1,
-            .spokes_lo = 0,
-            .lo_scale = 1,
-            .channels = 1};
+  Info info{
+      .type = Info::Type::ThreeD,
+      .channels = 1,
+      .matrix = {4, 4, 4},
+      .read_points = 4,
+      .read_gap = 0,
+      .spokes_hi = 1,
+      .spokes_lo = 0,
+      .lo_scale = 1,
+  };
   float const osamp = 2.f;
   R3 traj(3, info.read_points, info.spokes_total());
   traj.setZero();
@@ -111,7 +114,7 @@ TEST_CASE("Gridder with single spoke", "GRID-SPOKE")
 
   SECTION("NN")
   {
-    Kernel *kernel = new NearestNeighbour();
+    Kernel *kernel = new NearestNeighbour(1, log);
     Gridder gridder(info, traj, osamp, kernel, log);
     Cx3 cart = gridder.newGrid1();
     CHECK(cart.dimension(0) == 8);

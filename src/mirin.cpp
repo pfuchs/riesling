@@ -4,6 +4,7 @@
 #include "fft3.h"
 #include "fft3n.h"
 #include "gridder.h"
+#include "hankel.h"
 #include "io_nifti.h"
 #include "lowrank.h"
 #include "padder.h"
@@ -17,129 +18,97 @@ void MIRIN(
     float const os,
     Kernel *const kernel,
     std::string const &sdc,
-    long const calRad,
+    long const calSz,
     long const kSz,
     long const its,
     long const retain,
     Cx3 &in_data,
     Log &log)
 {
-  Info info = in_info;
-  info.read_gap = 0;
-  float const sense_res = 8.f;
-  Gridder gridder(info, traj, 1, kernel, log, sense_res, true);
-  SDC::Load(sdc, info, traj, kernel, gridder, log);
-  long const gap = in_info.read_gap;
+  float const sense_res = 10.f;
+  Gridder gridder(in_info, traj, os, kernel, log, sense_res, true);
+  SDC::Load(sdc, in_info, traj, kernel, gridder, log);
 
-  Cx4 grid = gridder.newGrid();
-  Cx4 grid0 = gridder.newGrid();
-  Cx4 temp = gridder.newGrid();
+  Cx4 x0 = gridder.newGrid();
+  Cx4 x = gridder.newGrid();
+  Cx4 y = gridder.newGrid();
   Cx3 transfer = gridder.newGrid1();
   FFT::Start(log);
-  FFT3N fft4(grid, log);
+  FFT3N fft4(x, log);
   FFT3 fft3(transfer, log);
-  Cx2 ones(info.read_points, info.spokes_total());
-  gridder.toCartesian(ones, transfer);
-
-  long const gridHalf = grid.dimension(1) / 2;
-  long const kernelHalf = kSz / 2;
-  long const calHalf = calRad - kernelHalf;
-  long const calSz = 2 * calHalf + 1;
-  long const nChan = grid.dimension(0);
-  long const calTotal = calSz * calSz * calSz;
-  long const startPoint = gridHalf - calHalf - kernelHalf;
-  log.info(FMT_STRING("MIRIN Kernel Size {} Cal Rad {} Cal Sz {}"), kSz, calRad, calSz);
-  if (startPoint < 0) {
-    log.fail("MIRIN Calibration + Kernel Size exceeds grid size");
+  {
+    Cx2 ones(in_info.read_points, in_info.spokes_total());
+    ones.setConstant(1.f);
+    gridder.toCartesian(ones, transfer);
   }
-
-  Cx5 kernels(nChan, kSz, kSz, kSz, calTotal);
-  auto kMat = CollapseToMatrix<Cx5, 4>(kernels);
-  long const nRetain = retain * info.channels;
+  log.image(transfer, "mirin-transfer.nii");
+  long const nChan = x.dimension(0);
+  Cx2 kernels(nChan * kSz * kSz * kSz, calSz * calSz * calSz);
+  Eigen::Map<Eigen::MatrixXcf> kMat(kernels.data(), kernels.dimension(0), kernels.dimension(1));
+  long const nRetain = retain * in_info.channels;
+  if (nRetain > kMat.cols()) {
+    log.fail(
+        FMT_STRING(
+            "Total cal size {} is smaller than number of vectors to retain {}, increase cal size"),
+        kMat.cols(),
+        nRetain);
+  }
   log.info(
-      FMT_STRING("SVD size {} {}, retaining {} out of {} singular vectors"),
+      FMT_STRING("SVD size {} {}, retaining {} singular vectors"),
       kMat.rows(),
       kMat.cols(),
-      nRetain,
-      calTotal);
-
-  auto toKernels = [&](Cx4 const &grid, Cx5 &kernels) -> long {
-    long col = 0;
-    for (long iz = -calHalf; iz <= calHalf; iz++) {
-      for (long iy = -calHalf; iy <= calHalf; iy++) {
-        for (long ix = -calHalf; ix <= calHalf; ix++) {
-          long const st_z = gridHalf + iz;
-          long const st_y = gridHalf + iy;
-          long const st_x = gridHalf + ix;
-          kernels.chip(col, 4) = grid.slice(Sz4{0, st_x, st_y, st_z}, Sz4{nChan, kSz, kSz, kSz});
-          col++;
-        }
-      }
-    }
-    return col;
-  };
-
-  auto fromKernels = [&](Cx5 const &kernels, Cx4 &grid) -> long {
-    static R3 count(gridder.gridDims());
-    count.setZero();
-    grid.setZero();
-    long col = 0;
-    for (long iz = -calHalf; iz <= calHalf; iz++) {
-      for (long iy = -calHalf; iy <= calHalf; iy++) {
-        for (long ix = -calHalf; ix <= calHalf; ix++) {
-          long const st_z = startPoint + iz;
-          long const st_y = startPoint + iy;
-          long const st_x = startPoint + ix;
-          grid.slice(Sz4{0, st_x, st_y, st_z}, Sz4{nChan, kSz, kSz, kSz}) += kernels.chip(col, 4);
-          count.slice(Sz3{st_x, st_y, st_z}, Sz3{kSz, kSz, kSz}) +=
-              count.slice(Sz3{st_x, st_y, st_z}, Sz3{kSz, kSz, kSz}).constant(1.f);
-          col++;
-        }
-      }
-    }
-    grid = grid.abs().select(grid / Tile(count, info.channels).cast<Cx>(), grid);
-    return col;
-  };
+      nRetain);
 
   fmt::print(
       FMT_STRING("kernels {} grid {}\n"),
       fmt::join(kernels.dimensions(), ","),
-      fmt::join(grid.dimensions(), ","));
+      fmt::join(x.dimensions(), ","));
 
-  gridder.toCartesian(in_data, grid0);
-  fft4.reverse(grid0);
-  float const norm0 = Norm(grid0);
-  log.image(grid0, "mirin-img0.nii");
-  grid.setZero();
+  gridder.toCartesian(in_data, x0);
+  log.image(x0, "mirin-x0.nii");
+  fft4.reverse(x0);
+  float const norm0 = Norm(x0);
+  log.image(x0, "mirin-img0.nii");
+  x.setZero();
+  y.setZero();
   auto dev = Threads::GlobalDevice();
   for (long ii = 0; ii < its; ii++) {
     // Data consistency
-    temp.device(dev) = grid;
-    fft4.forward(temp);
-    temp.device(dev) = temp * Tile(transfer, info.channels);
-    fft4.reverse(temp);
-    temp.device(dev) = grid - (temp - grid0);
-    log.image(temp, fmt::format(FMT_STRING("mirin-img-{:02d}.nii"), ii));
-    fft4.forward(temp);
-    log.image(temp, fmt::format(FMT_STRING("mirin-grid-{:02d}.nii"), ii));
-    toKernels(temp, kernels);
+    fft4.forward(y);
+    y.device(dev) = y * Tile(transfer, in_info.channels);
+    fft4.reverse(y);
+    y.device(dev) = x - (y - x0);
+    log.image(y, fmt::format(FMT_STRING("mirin-img-{:02d}.nii"), ii));
+    fft4.forward(y);
+    log.image(y, fmt::format(FMT_STRING("mirin-ks-{:02d}.nii"), ii));
+    ToKernels(calSz, kSz, y, kernels, log);
+    // log.image(
+    //     Cx3(kernels.reshape(Sz3{kernels.dimension(0), kernels.dimension(1), 1})),
+    //     fmt::format(FMT_STRING("mirin-kernels-pre{:02d}.nii"), ii));
     kMat = LowRank(kMat, nRetain);
-    fromKernels(kernels, temp);
-    log.image(temp, fmt::format(FMT_STRING("mirin-lrank-{:02d}.nii"), ii));
-    fft4.reverse(temp);
-    log.image(temp, fmt::format(FMT_STRING("mirin-lrank-img-{:02d}.nii"), ii));
-    float const delta = Norm(temp - grid) / norm0;
+    // log.image(
+    //     Cx3(kernels.reshape(Sz3{kernels.dimension(0), kernels.dimension(1), 1})),
+    //     fmt::format(FMT_STRING("mirin-kernels-post{:02d}.nii"), ii));
+    FromKernels(calSz, kSz, kernels, y, log);
+    log.image(y, fmt::format(FMT_STRING("mirin-kslrank-{:02d}.nii"), ii));
+    fft4.reverse(y);
+    log.image(y, fmt::format(FMT_STRING("mirin-imglrank-{:02d}.nii"), ii));
+    float const delta = Norm(y - x) / norm0;
     log.info(FMT_STRING("MIRIN {} δ {}"), ii, delta);
-    grid.device(dev) = temp;
+    x.device(dev) = y;
     if (delta < 1.e-5) {
       break;
     }
   }
-  log.image(grid, "mirin-img-final.nii");
-  fft4.forward(grid);
+  log.image(x, "mirin-img-final.nii");
+  fft4.forward(x);
   Cx3 out_data(in_data.dimensions());
-  gridder.toNoncartesian(grid, out_data);
-  in_data.slice(Sz3{0, 0, 0}, Sz3{info.channels, gap, info.spokes_total()}) =
-      out_data.slice(Sz3{0, 0, 0}, Sz3{info.channels, gap, info.spokes_total()});
+
+  Info out_info = in_info;
+  out_info.read_gap = 0;
+  Gridder outGridder(out_info, traj, os, kernel, log, sense_res, true);
+  outGridder.toNoncartesian(x, out_data);
+  in_data.slice(Sz3{0, 0, 0}, Sz3{in_info.channels, in_info.read_gap, in_info.spokes_total()}) =
+      out_data.slice(Sz3{0, 0, 0}, Sz3{in_info.channels, in_info.read_gap, in_info.spokes_total()});
   FFT::End(log);
 }

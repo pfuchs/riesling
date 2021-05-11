@@ -40,8 +40,8 @@ int main_tgv(args::Subparser &parser)
   auto const info = reader.info();
   R3 trajectory = reader.readTrajectory();
   Kernel *kernel =
-      kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD))
-         : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1);
+      kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD), log)
+         : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1, log);
   Gridder gridder(info, reader.readTrajectory(), osamp.Get(), kernel, log);
   SDC::Load(sdc.Get(), info, trajectory, kernel, gridder, log);
   gridder.setSDCExponent(sdc_exp.Get());

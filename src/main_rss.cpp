@@ -19,8 +19,8 @@ int main_rss(args::Subparser &parser)
   HD5::Reader reader(fname.Get(), log);
   auto const &info = reader.info();
   Kernel *kernel =
-      kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD))
-         : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1);
+      kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD), log)
+         : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1, log);
   R3 const trajectory = reader.readTrajectory();
   Gridder gridder(info, trajectory, osamp.Get(), kernel, log);
   SDC::Load(sdc.Get(), info, trajectory, kernel, gridder, log);

@@ -87,8 +87,8 @@ int main_phantom(args::Subparser &parser)
 
   // We want effective sample positions at the middle of the bin
   R3 const grid_traj = ArchimedeanSpiral(grid_info, decimate ? grid_samp.Get() / 2 : 0);
-  Kernel *kernel =
-      kb ? (Kernel *)new KaiserBessel(3, grid_samp.Get(), true) : (Kernel *)new NearestNeighbour();
+  Kernel *kernel = kb ? (Kernel *)new KaiserBessel(3, grid_samp.Get(), true, log)
+                      : (Kernel *)new NearestNeighbour(1, log);
   Gridder gridder(grid_info, grid_traj, grid_samp.Get(), kernel, log);
   Cx4 grid = gridder.newGrid();
   FFT3N fft(grid, log); // FFTW needs temp space for planning

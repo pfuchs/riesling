@@ -1,13 +1,14 @@
 #pragma once
 
 #include "kernel.h"
+#include "log.h"
 #include <memory>
 
 struct FFT3; // Forward declare
 
 struct KaiserBessel final : Kernel
 {
-  KaiserBessel(long const w, float const os, bool const threeD = true);
+  KaiserBessel(long const w, float const os, bool const threeD, Log &log);
   float radius() const;
   Sz3 start() const;
   Sz3 size() const;
@@ -17,6 +18,7 @@ struct KaiserBessel final : Kernel
   void sqrtOff();
 
 private:
+  Log log_;
   long w_;
   float beta_;
   bool threeD_;

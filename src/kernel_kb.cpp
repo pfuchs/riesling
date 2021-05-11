@@ -6,8 +6,9 @@
 #include "threads.h"
 #include <fmt/ostream.h>
 
-KaiserBessel::KaiserBessel(long const w, float const os, bool const threeD)
-    : w_{w}
+KaiserBessel::KaiserBessel(long const w, float const os, bool const threeD, Log &l)
+    : log_{l}
+    , w_{w}
     , beta_{(float)M_PI * sqrtf(pow(w_ * (os - 0.5f) / os, 2.f) - 0.8f)}
     , threeD_{threeD}
     , fft_{nullptr}
@@ -21,6 +22,8 @@ KaiserBessel::KaiserBessel(long const w, float const os, bool const threeD)
   // Array of indices used when building the kernel
   p_.resize(w_);
   std::iota(p_.data(), p_.data() + p_.size(), -w / 2);
+
+  log_.info(FMT_STRING("Kaiser-Bessel kernel size {}"), fmt::join(sz_, ","));
 }
 
 float KaiserBessel::radius() const
@@ -45,8 +48,7 @@ void KaiserBessel::sqrtOn()
    * spherically-symmetric versus separable kernels. So instead, we do the FFT and sqrt
    * which is much slower, but works
    */
-  Log nullLog;
-  fft_ = std::make_unique<FFT3>(sz_, nullLog, 1);
+  fft_ = std::make_unique<FFT3>(sz_, log_, 1);
 }
 
 void KaiserBessel::sqrtOff()

@@ -1,10 +1,11 @@
 #pragma once
 
 #include "kernel.h"
+#include "log.h"
 
 struct NearestNeighbour final : Kernel
 {
-  NearestNeighbour(long const w = 1);
+  NearestNeighbour(long const w, Log &l);
   float radius() const;
   Sz3 start() const;
   Sz3 size() const;

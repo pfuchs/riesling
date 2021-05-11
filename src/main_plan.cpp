@@ -21,8 +21,8 @@ int main_plan(args::Subparser &parser)
   auto const &info = reader.info();
   auto const trajectory = reader.readTrajectory();
   Kernel *kernel =
-      kb ? (Kernel *)new KaiserBessel(3, osamp.Get(), (info.type == Info::Type::ThreeD))
-         : (Kernel *)new NearestNeighbour();
+      kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD), log)
+         : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1, log);
   Gridder gridder(info, trajectory, osamp.Get(), kernel, log);
   Cx4 grid4 = gridder.newGrid();
   Cx3 grid3 = gridder.newGrid1();

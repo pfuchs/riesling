@@ -20,8 +20,8 @@ int main_traj(args::Subparser &parser)
   auto const info = reader.info();
   auto const trajectory = reader.readTrajectory();
   Kernel *kernel =
-      kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD))
-         : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1);
+      kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD), log)
+         : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1, log);
   Gridder gridder(info, trajectory, osamp.Get(), kernel, log);
   SDC::Load(sdc.Get(), info, trajectory, kernel, gridder, log);
   Cx3 grid = gridder.newGrid1();

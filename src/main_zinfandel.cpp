@@ -35,7 +35,7 @@ int main_zinfandel(args::Subparser &parser)
   args::ValueFlag<long> kernelSz(
       parser, "KERNEL SIZE", "Mirin Kernel size (default 5)", {"kernel"}, 5);
   args::ValueFlag<long> calSz(
-      parser, "CAL SIZE", "MIRIN Calibration region radius (default 16)", {"cal"}, 16);
+      parser, "CAL SIZE", "MIRIN Calibration region radius (default 15)", {"cal"}, 15);
   args::ValueFlag<long> its(parser, "ITERATIONS", "Maximum iterations", {"its"}, 4);
   args::ValueFlag<long> retain(
       parser,
@@ -49,7 +49,13 @@ int main_zinfandel(args::Subparser &parser)
   HD5::Reader reader(fname.Get(), log);
   auto info = reader.info();
   auto const trajectory = reader.readTrajectory();
-  long const gap_sz = gap ? gap.Get() : info.read_gap;
+  if (gap) {
+    info.read_gap = gap.Get();
+    log.info(FMT_STRING("Set read gap to {}"), info.read_gap);
+  }
+  if (info.read_gap < 1) {
+    log.fail(FMT_STRING("Read gap was {}, nothing to do"), info.read_gap);
+  }
   R3 traj = reader.readTrajectory();
 
   auto out_info = info;
@@ -63,18 +69,20 @@ int main_zinfandel(args::Subparser &parser)
   writer.writeTrajectory(traj);
   writer.writeMeta(reader.readMeta());
 
-  Cx4 rad_ks = info.noncartesianSeries();
-  reader.readNoncartesian(rad_ks);
+  Cx4 rad_ks = out_info.noncartesianSeries();
+  Cx3 vol = out_info.noncartesianVolume();
+  Kernel *kernel =
+      kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD), log)
+         : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1, log);
+  long ov = 0; // Output volume index
   for (auto const &iv : WhichVolumes(volume.Get(), info.volumes)) {
-    Cx3 vol = rad_ks.chip(iv, 3);
-    vol.slice(Sz3{0, 0, 0}, Sz3{info.channels, gap_sz, info.spokes_total()})
+    reader.readNoncartesian(iv, vol);
+    fmt::print(FMT_STRING("Setting {} samples to zero\n"), info.read_gap);
+    vol.slice(Sz3{0, 0, 0}, Sz3{info.channels, info.read_gap, info.spokes_total()})
         .setZero(); // Ensure no rubbish
     if (twostep) {
-      zinfandel2(gap_sz, src.Get(), read.Get(), l1.Get(), vol, log);
+      zinfandel2(info.read_gap, src.Get(), read.Get(), l1.Get(), vol, log);
     } else if (mirin) {
-      Kernel *kernel =
-          kb ? (Kernel *)new KaiserBessel(3, osamp.Get(), (info.type == Info::Type::ThreeD))
-             : (Kernel *)new NearestNeighbour();
       MIRIN(
           info,
           trajectory,
@@ -88,17 +96,14 @@ int main_zinfandel(args::Subparser &parser)
           vol,
           log);
     } else if (pinot) {
-      Kernel *kernel =
-          kb ? (Kernel *)new KaiserBessel(3, osamp.Get(), (info.type == Info::Type::ThreeD))
-             : (Kernel *)new NearestNeighbour();
       PINOT(info, trajectory, osamp.Get(), kernel, vol, log);
     } else {
-      zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), l1.Get(), vol, log);
+      zinfandel(info.read_gap, src.Get(), spokes.Get(), read.Get(), l1.Get(), vol, log);
     }
     if (pw && rbw) {
       slab_correct(out_info, pw.Get(), rbw.Get(), vol, log);
     }
-    rad_ks.chip(iv, 3) = vol;
+    rad_ks.chip(ov++, 3) = vol;
   }
   writer.writeNoncartesian(rad_ks);
   log.info("Finished");

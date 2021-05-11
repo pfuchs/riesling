@@ -1,8 +1,9 @@
 #include "kernel_nn.h"
 
-NearestNeighbour::NearestNeighbour(long const w)
+NearestNeighbour::NearestNeighbour(long const w, Log &l)
     : w_{w}
 {
+  l.info(FMT_STRING("Nearest neighbour kernel, width {}"), w);
 }
 
 float NearestNeighbour::radius() const
