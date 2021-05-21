@@ -55,26 +55,17 @@ int main_sense(args::Subparser &parser)
   Cx3 rad_ks = info.noncartesianVolume();
   long currentVolume = SenseVolume(sense_vol, info.volumes);
   reader.readNoncartesian(currentVolume, rad_ks);
-  Cx4 sense = espirit ? cropper.crop4(ESPIRIT(
-                            info,
-                            trajectory,
-                            osamp.Get(),
-                            kernel,
-                            calSz.Get(),
-                            kernelSz.Get(),
-                            retain.Get(),
-                            rad_ks,
-                            log))
-                      : cropper.crop4(SENSE(
-                            info,
-                            trajectory,
-                            osamp.Get(),
-                            kernel,
-                            false,
-                            sdc.Get(),
-                            thresh.Get(),
-                            rad_ks,
-                            log));
+  Cx4 sense = cropper.crop4(SENSE(
+      senseMethod.Get(),
+      info,
+      trajectory,
+      osamp.Get(),
+      kernel,
+      false,
+      sdc.Get(),
+      thresh.Get(),
+      rad_ks,
+      log));
   if (save_maps) {
     WriteNifti(
         info,

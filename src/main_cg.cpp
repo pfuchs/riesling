@@ -48,8 +48,17 @@ int main_cg(args::Subparser &parser)
 
   long currentVolume = SenseVolume(sense_vol, info.volumes);
   reader.readNoncartesian(currentVolume, rad_ks);
-  Cx4 const sense = iter_cropper.crop4(
-      SENSE(info, trajectory, osamp.Get(), kernel, false, sdc.Get(), 0.f, rad_ks, log));
+  Cx4 const sense = iter_cropper.crop4(SENSE(
+      senseMethod.Get(),
+      info,
+      trajectory,
+      osamp.Get(),
+      kernel,
+      false,
+      sdc.Get(),
+      0.f,
+      rad_ks,
+      log));
 
   Cx2 ones(info.read_points, info.spokes_total());
   ones.setConstant({1.0f});

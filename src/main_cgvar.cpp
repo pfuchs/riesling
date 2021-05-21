@@ -51,8 +51,17 @@ int main_cgvar(args::Subparser &parser)
 
   long currentVolume = SenseVolume(sense_vol, info.volumes);
   reader.readNoncartesian(currentVolume, rad_ks);
-  Cx4 const sense = iter_cropper.crop4(
-      SENSE(info, trajectory, osamp.Get(), kernel, false, sdc.Get(), 0.f, rad_ks, log));
+  Cx4 const sense = iter_cropper.crop4(SENSE(
+      senseMethod.Get(),
+      info,
+      trajectory,
+      osamp.Get(),
+      kernel,
+      false,
+      sdc.Get(),
+      0.f,
+      rad_ks,
+      log));
 
   CgVarSystem sys = [&](Cx3 const &x, Cx3 &y, float const pre) {
     auto const start = log.now();

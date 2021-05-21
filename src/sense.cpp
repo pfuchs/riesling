@@ -2,11 +2,12 @@
 
 #include "fft3n.h"
 #include "gridder.h"
+#include "io_hd5.h"
 #include "sdc.h"
 #include "tensorOps.h"
 #include "threads.h"
 
-Cx4 SENSE(
+Cx4 Direct(
     Info const &info,
     R3 const &traj,
     float const os,
@@ -46,4 +47,29 @@ Cx4 SENSE(
   }
   log.info("Finished SENSE maps");
   return grid;
+}
+
+Cx4 SENSE(
+    std::string const &method,
+    Info const &info,
+    R3 const &traj,
+    float const os,
+    Kernel *const kernel,
+    bool const shrink,
+    std::string const &sdc,
+    float const threshold,
+    Cx3 const &data,
+    Log &log)
+{
+  if (method == "direct") {
+    return Direct(info, traj, os, kernel, shrink, sdc, threshold, data, log);
+  } else {
+    log.info("Loading SENSE data from {}", method);
+    HD5::Reader reader(method, log);
+    Info const &cal_info = reader.info();
+    R3 const cal_traj = reader.readTrajectory();
+    Cx3 cal_data = cal_info.noncartesianVolume();
+    reader.readNoncartesian(0, cal_data);
+    return Direct(cal_info, cal_traj, os, kernel, shrink, "pipe", threshold, cal_data, log);
+  }
 }

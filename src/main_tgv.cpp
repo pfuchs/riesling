@@ -54,8 +54,17 @@ int main_tgv(args::Subparser &parser)
   Cx3 rad_ks = info.noncartesianVolume();
   long currentVolume = SenseVolume(sense_vol, info.volumes);
   reader.readNoncartesian(currentVolume, rad_ks);
-  Cx4 sense = iter_cropper.crop4(
-      SENSE(info, trajectory, osamp.Get(), kernel, false, sdc.Get(), 0.f, rad_ks, log));
+  Cx4 sense = iter_cropper.crop4(SENSE(
+      senseMethod.Get(),
+      info,
+      trajectory,
+      osamp.Get(),
+      kernel,
+      false,
+      sdc.Get(),
+      0.f,
+      rad_ks,
+      log));
 
   EncodeFunction enc = [&](Cx3 &x, Cx3 &y) {
     auto const &start = log.now();

@@ -8,6 +8,7 @@
  * Calculates a set of SENSE maps from non-cartesian data, assuming an oversampled central region
  */
 Cx4 SENSE(
+    std::string const &method,
     Info const &info,
     R3 const &traj,
     float const os,
