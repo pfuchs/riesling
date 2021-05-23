@@ -40,8 +40,7 @@ int main_phantom(args::Subparser &parser)
       parser, "SRATE", "Sample factor for spokes (default 1)", {'s', "spokes"}, 1);
   args::ValueFlag<long> lores(
       parser, "LO-RES", "Include lo-res k-space with scale factor (suggest 8)", {'l', "lores"}, 0);
-  args::ValueFlag<float> gap(
-      parser, "DEAD-TIME", "Dead-time gap in Nyquist dwells at nominal resolution", {"gap"}, 0);
+  args::ValueFlag<long> gap(parser, "DEAD-TIME", "Dead-time gap in read samples", {"gap"}, 0);
   args::ValueFlag<long> nchan(
       parser, "CHANNELS", "Number of channels (default 12)", {'c', "channels"}, 12);
   args::ValueFlag<float> intensity(
@@ -87,7 +86,7 @@ int main_phantom(args::Subparser &parser)
       FMT_STRING("Hi-res spokes: {} Lo-res spokes: {}"), grid_info.spokes_hi, grid_info.spokes_lo);
 
   // We want effective sample positions at the middle of the bin
-  Trajectory const grid_traj(
+  Trajectory grid_traj(
       grid_info, ArchimedeanSpiral(grid_info, decimate ? grid_samp.Get() / 2 : 0), log);
   Kernel *kernel =
       kb ? (Kernel *)new KaiserBessel(3, grid_samp.Get(), true) : (Kernel *)new NearestNeighbour();
@@ -130,7 +129,7 @@ int main_phantom(args::Subparser &parser)
   if (decimate) {
     Info out_info{.matrix = Array3l{m, m, m},
                   .read_points = static_cast<long>(read_samp.Get() * m / 2),
-                  .read_gap = long(gap.Get() * read_samp.Get()),
+                  .read_gap = 0,
                   .spokes_hi = spokes_hi,
                   .spokes_lo = lores ? static_cast<long>(spokes_hi / lores.Get()) : 0,
                   .lo_scale = lores ? lores.Get() : 1.f,
@@ -150,24 +149,19 @@ int main_phantom(args::Subparser &parser)
 
     if (gap) {
       decimated
-          .slice(
-              Dims3{0, 0, 0},
-              Dims3{
-                  grid_info.channels, long(gap.Get() * read_samp.Get()), grid_info.spokes_total()})
+          .slice(Dims3{0, 0, 0}, Dims3{grid_info.channels, gap.Get(), grid_info.spokes_total()})
           .setZero();
+      out_info.read_gap = gap.Get();
     }
     writer.writeTrajectory(Trajectory(out_info, out_points, log));
     writer.writeNoncartesian(Cx4(decimated.reshape(
         Sz4{decimated.dimension(0), decimated.dimension(1), decimated.dimension(2), 1})));
   } else {
     if (gap) {
-      radial
-          .slice(
-              Dims3{0, 0, 0},
-              Dims3{
-                  grid_info.channels, long(gap.Get() * read_samp.Get()), grid_info.spokes_total()})
+      radial.slice(Dims3{0, 0, 0}, Dims3{grid_info.channels, gap.Get(), grid_info.spokes_total()})
           .setZero();
-      grid_info.read_gap = long(gap.Get() * read_samp.Get());
+      grid_info.read_gap = gap.Get();
+      grid_traj = Trajectory(grid_info, grid_traj.points(), log);
     }
     writer.writeTrajectory(grid_traj);
     writer.writeNoncartesian(radial.reshape(
