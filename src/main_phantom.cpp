@@ -31,7 +31,7 @@ int main_phantom(args::Subparser &parser)
   args::ValueFlag<Eigen::Vector3f, Vector3fReader> phan_c(
       parser, "X,Y,Z", "Center position of phantom (in mm)", {"center"}, Eigen::Vector3f::Zero());
   args::ValueFlag<long> coil_rings(
-      parser, "COIL RINGS", "Number of rings in coil (default 1)", {"coil_rings"}, 1);
+      parser, "COIL RINGS", "Number of rings in coil (default 1)", {"rings"}, 1);
   args::ValueFlag<float> coil_r(
       parser, "COIL RADIUS", "Radius of the coil in mm (default 150)", {"coil_rad"}, 150.f);
   args::ValueFlag<float> read_samp(
@@ -40,7 +40,8 @@ int main_phantom(args::Subparser &parser)
       parser, "SRATE", "Sample factor for spokes (default 1)", {'s', "spokes"}, 1);
   args::ValueFlag<long> lores(
       parser, "LO-RES", "Include lo-res k-space with scale factor (suggest 8)", {'l', "lores"}, 0);
-  args::ValueFlag<long> gap(parser, "DEAD-TIME", "Samples in dead-time (def 0)", {"gap"}, 0);
+  args::ValueFlag<float> gap(
+      parser, "DEAD-TIME", "Dead-time gap in Nyquist dwells at nominal resolution", {"gap"}, 0);
   args::ValueFlag<long> nchan(
       parser, "CHANNELS", "Number of channels (default 12)", {'c', "channels"}, 12);
   args::ValueFlag<float> intensity(
@@ -68,7 +69,7 @@ int main_phantom(args::Subparser &parser)
   Info grid_info{.matrix = Array3l{m, m, m},
                  .read_points =
                      (long)(decimate ? grid_samp.Get() * m / 2 : read_samp.Get() * m / 2),
-                 .read_gap = gap.Get(),
+                 .read_gap = 0,
                  .spokes_hi = spokes_hi,
                  .spokes_lo = lores ? static_cast<long>(spokes_hi / lores.Get()) : 0,
                  .lo_scale = lores ? lores.Get() : 1.f,
@@ -129,7 +130,7 @@ int main_phantom(args::Subparser &parser)
   if (decimate) {
     Info out_info{.matrix = Array3l{m, m, m},
                   .read_points = static_cast<long>(read_samp.Get() * m / 2),
-                  .read_gap = gap.Get(),
+                  .read_gap = long(gap.Get() * read_samp.Get()),
                   .spokes_hi = spokes_hi,
                   .spokes_lo = lores ? static_cast<long>(spokes_hi / lores.Get()) : 0,
                   .lo_scale = lores ? lores.Get() : 1.f,
@@ -149,19 +150,25 @@ int main_phantom(args::Subparser &parser)
 
     if (gap) {
       decimated
-          .slice(Dims3{0, 0, 0}, Dims3{grid_info.channels, gap.Get(), grid_info.spokes_total()})
+          .slice(
+              Dims3{0, 0, 0},
+              Dims3{
+                  grid_info.channels, long(gap.Get() * read_samp.Get()), grid_info.spokes_total()})
           .setZero();
     }
-    writer.writeInfo(out_info);
     writer.writeTrajectory(Trajectory(out_info, out_points, log));
     writer.writeNoncartesian(Cx4(decimated.reshape(
         Sz4{decimated.dimension(0), decimated.dimension(1), decimated.dimension(2), 1})));
   } else {
     if (gap) {
-      radial.slice(Dims3{0, 0, 0}, Dims3{grid_info.channels, gap.Get(), grid_info.spokes_total()})
+      radial
+          .slice(
+              Dims3{0, 0, 0},
+              Dims3{
+                  grid_info.channels, long(gap.Get() * read_samp.Get()), grid_info.spokes_total()})
           .setZero();
+      grid_info.read_gap = long(gap.Get() * read_samp.Get());
     }
-    writer.writeInfo(grid_info);
     writer.writeTrajectory(grid_traj);
     writer.writeNoncartesian(radial.reshape(
         Sz4{grid_info.channels, grid_info.read_points, grid_info.spokes_total(), 1}));
