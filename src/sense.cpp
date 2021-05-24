@@ -1,13 +1,14 @@
 #include "sense.h"
 
 #include "fft3n.h"
+#include "filter.h"
 #include "gridder.h"
 #include "io_hd5.h"
 #include "sdc.h"
 #include "tensorOps.h"
 #include "threads.h"
 
-float const sense_res = 12.f;
+float const sense_res = 8.f;
 
 Cx4 Direct(Gridder const &gridder, Cx3 const &data, Log &log)
 {
@@ -18,6 +19,19 @@ Cx4 Direct(Gridder const &gridder, Cx3 const &data, Log &log)
   grid.setZero();
   rss.setZero();
   gridder.toCartesian(data, grid);
+
+  float const end_rad = gridder.info().voxel_size.minCoeff() / sense_res;
+  float const start_rad = 0.5 * end_rad;
+  log.info(
+      FMT_STRING("SENSE res {} image res {} oversample {} filter {}-{}"),
+      sense_res,
+      gridder.info().voxel_size.minCoeff(),
+      gridder.oversample(),
+      start_rad,
+      end_rad);
+  log.image(grid, "before.nii");
+  KSTukey(start_rad, end_rad, 0.f, grid, log);
+  log.image(grid, "after.nii");
   fftN.reverse();
   rss.device(Threads::GlobalDevice()) = (grid * grid.conjugate()).real().sum(Sz1{0}).sqrt();
   log.info("Normalizing channel images");

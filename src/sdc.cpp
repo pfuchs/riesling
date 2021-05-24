@@ -29,7 +29,7 @@ R2 Pipe(Trajectory const &traj, Gridder &gridder, Log &log)
   Cx2 W(gridder.info().read_points, gridder.info().spokes_total());
   Cx2 Wp(W.dimensions());
 
-  W.setConstant(1.f);
+  W.setZero();
   for (long is = 0; is < traj.info().spokes_total(); is++) {
     for (long ir = 0; ir < traj.info().read_points; ir++) {
       W(ir, is) = traj.merge(ir, is);
@@ -37,18 +37,17 @@ R2 Pipe(Trajectory const &traj, Gridder &gridder, Log &log)
   }
 
   gridder.kernel()->sqrtOn();
-  gridder.setSDC(1.f);
   Cx3 temp = gridder.newGrid1();
-  for (long ii = 0; ii < 8; ii++) {
+  for (long ii = 0; ii < 10; ii++) {
     Wp.setZero();
     temp.setZero();
     gridder.toCartesian(W, temp);
     gridder.toNoncartesian(temp, Wp);
     Wp.device(Threads::GlobalDevice()) =
         (Wp.real() > 0.f).select(W / Wp, W); // Avoid divide by zero problems
-    float const delta = Norm(Wp - W) / W.size();
+    float const delta = R0((Wp - W).real().square().maximum())();
     W.device(Threads::GlobalDevice()) = Wp;
-    if (delta < 1.e-5) {
+    if (delta < 1.e-3) {
       log.info("SDC converged, delta was {}", delta);
       break;
     } else {
