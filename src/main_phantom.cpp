@@ -47,18 +47,9 @@ int main_phantom(args::Subparser &parser)
       parser, "INTENSITY", "Phantom intensity (default 1000)", {'i', "intensity"}, 1000.f);
   args::ValueFlag<float> snr(parser, "SNR", "Add noise (specified as SNR)", {'n', "snr"}, 0);
   args::Flag kb(parser, "KAISER-BESSEL", "Use Kaiser-Bessel kernel", {'k', "kb"});
-  args::Flag decimate(parser, "DECIMATION", "Simulate decimation", {"decimate"});
 
   Log log = ParseCommand(parser, fname);
   FFT::Start(log);
-
-  if (decimate && std::fmod(grid_samp.Get(), read_samp.Get()) != 0.f) {
-    log.fail(
-        FMT_STRING("When decimating grid sample rate ({}) must be integer multiple of read sample "
-                   "rate ({})"),
-        grid_samp.Get(),
-        read_samp.Get());
-  }
 
   auto const m = matrix.Get();
   auto const vox_sz = fov.Get() / m;
@@ -66,8 +57,7 @@ int main_phantom(args::Subparser &parser)
   auto const o = -(m * vox_sz) / 2;
   // Strategy - sample the grid at the *grid* sampling rate, and then decimate to read sampling rate
   Info grid_info{.matrix = Array3l{m, m, m},
-                 .read_points =
-                     (long)(decimate ? grid_samp.Get() * m / 2 : read_samp.Get() * m / 2),
+                 .read_points = (long)read_samp.Get() * m / 2,
                  .read_gap = 0,
                  .spokes_hi = spokes_hi,
                  .spokes_lo = lores ? static_cast<long>(spokes_hi / lores.Get()) : 0,
@@ -83,11 +73,13 @@ int main_phantom(args::Subparser &parser)
       read_samp.Get(),
       gap.Get());
   log.info(
-      FMT_STRING("Hi-res spokes: {} Lo-res spokes: {}"), grid_info.spokes_hi, grid_info.spokes_lo);
+      FMT_STRING("Hi-res spokes: {} Lo-res spokes: {} Lo-res scale: {}"),
+      grid_info.spokes_hi,
+      grid_info.spokes_lo,
+      grid_info.lo_scale);
 
   // We want effective sample positions at the middle of the bin
-  Trajectory grid_traj(
-      grid_info, ArchimedeanSpiral(grid_info, decimate ? grid_samp.Get() / 2 : 0), log);
+  Trajectory grid_traj(grid_info, ArchimedeanSpiral(grid_info, 0), log);
   Kernel *kernel =
       kb ? (Kernel *)new KaiserBessel(3, grid_samp.Get(), true) : (Kernel *)new NearestNeighbour();
   Gridder gridder(grid_traj, grid_samp.Get(), kernel, false, log);
@@ -108,6 +100,7 @@ int main_phantom(args::Subparser &parser)
   log.info("Generating coil sensitivities...");
   Cx4 sense = birdcage(grid_info, coil_rings.Get(), coil_r.Get(), coil_r.Get(), log);
   log.info("Generating coil images...");
+  grid.setZero();
   cropper.crop4(grid).device(Threads::GlobalDevice()) = sense * Tile(phan, grid_info.channels);
   if (log.level() >= Log::Level::Images) { // Extra check to avoid the shuffle when we can
     log.image(SwapToChannelLast(grid), "phantom-prefft.nii");
@@ -126,47 +119,17 @@ int main_phantom(args::Subparser &parser)
   }
 
   HD5::Writer writer(std::filesystem::path(fname.Get()).replace_extension(".h5").string(), log);
-  if (decimate) {
-    Info out_info{.matrix = Array3l{m, m, m},
-                  .read_points = static_cast<long>(read_samp.Get() * m / 2),
-                  .read_gap = 0,
-                  .spokes_hi = spokes_hi,
-                  .spokes_lo = lores ? static_cast<long>(spokes_hi / lores.Get()) : 0,
-                  .lo_scale = lores ? lores.Get() : 1.f,
-                  .channels = nchan.Get(),
-                  .voxel_size = Eigen::Array3f{vox_sz, vox_sz, vox_sz}};
-
-    R3 const out_points = ArchimedeanSpiral(out_info, read_samp.Get() / 2);
-    long const decimation_factor = grid_samp.Get() / read_samp.Get();
-    Cx3 decimated = out_info.noncartesianVolume();
-    decimated.setZero();
-    decimated = radial
-                    .reshape(Dims4{out_info.channels,
-                                   decimation_factor,
-                                   grid_info.read_points / decimation_factor,
-                                   out_info.spokes_total()})
-                    .sum(Sz1{1});
-
-    if (gap) {
-      decimated
-          .slice(Dims3{0, 0, 0}, Dims3{grid_info.channels, gap.Get(), grid_info.spokes_total()})
-          .setZero();
-      out_info.read_gap = gap.Get();
-    }
-    writer.writeTrajectory(Trajectory(out_info, out_points, log));
-    writer.writeNoncartesian(Cx4(decimated.reshape(
-        Sz4{decimated.dimension(0), decimated.dimension(1), decimated.dimension(2), 1})));
-  } else {
-    if (gap) {
-      radial.slice(Dims3{0, 0, 0}, Dims3{grid_info.channels, gap.Get(), grid_info.spokes_total()})
-          .setZero();
-      grid_info.read_gap = gap.Get();
-      grid_traj = Trajectory(grid_info, grid_traj.points(), log);
-    }
-    writer.writeTrajectory(grid_traj);
-    writer.writeNoncartesian(radial.reshape(
-        Sz4{grid_info.channels, grid_info.read_points, grid_info.spokes_total(), 1}));
+  if (gap) {
+    grid_info.read_gap = gap.Get();
+    Sz3 sz{grid_info.channels, grid_info.read_gap, grid_info.spokes_total()};
+    fmt::print("radial {} slice {}\n", fmt::join(radial.dimensions(), ","), fmt::join(sz, ","));
+    radial.slice(Sz3{0, 0, 0}, sz).setZero();
+    grid_traj = Trajectory(grid_info, grid_traj.points(), log);
   }
+  writer.writeTrajectory(grid_traj);
+  writer.writeNoncartesian(
+      radial.reshape(Sz4{grid_info.channels, grid_info.read_points, grid_info.spokes_total(), 1}));
+
   FFT::End(log);
   return EXIT_SUCCESS;
 }

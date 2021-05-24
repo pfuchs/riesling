@@ -14,7 +14,7 @@ void Load(std::string const &fname, Trajectory const &traj, Gridder &gridder, Lo
   } else if (fname == "none") {
     return;
   } else if (fname == "pipe") {
-    gridder.setSDC(Pipe(gridder, log));
+    gridder.setSDC(Pipe(traj, gridder, log));
   } else if (fname == "radial") {
     gridder.setSDC(Radial(traj, log));
   } else {
@@ -23,13 +23,19 @@ void Load(std::string const &fname, Trajectory const &traj, Gridder &gridder, Lo
   }
 }
 
-R2 Pipe(Gridder &gridder, Log &log)
+R2 Pipe(Trajectory const &traj, Gridder &gridder, Log &log)
 {
   log.info("Using Pipe/Zwart/Menon SDC...");
   Cx2 W(gridder.info().read_points, gridder.info().spokes_total());
   Cx2 Wp(W.dimensions());
 
   W.setConstant(1.f);
+  for (long is = 0; is < traj.info().spokes_total(); is++) {
+    for (long ir = 0; ir < traj.info().read_points; ir++) {
+      W(ir, is) = traj.merge(ir, is);
+    }
+  }
+
   gridder.kernel()->sqrtOn();
   gridder.setSDC(1.f);
   Cx3 temp = gridder.newGrid1();
