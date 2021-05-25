@@ -1,16 +1,13 @@
 #pragma once
 
-#include "info.h"
-#include "kernel.h"
+#include "gridder.h"
 #include "log.h"
 
 Cx4 ESPIRIT(
-    Info const &info,
-    R3 const &traj,
-    float const os,
-    Kernel *const kb,
+    Gridder const &hires,
+    Gridder const &lores,
+    Cx3 const &data,
     long const calSz,
     long const kernelSz,
     float const retain,
-    Cx3 const &data,
     Log &log);

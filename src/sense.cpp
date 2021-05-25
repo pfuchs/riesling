@@ -1,5 +1,6 @@
 #include "sense.h"
 
+#include "espirit.h"
 #include "fft3n.h"
 #include "filter.h"
 #include "gridder.h"
@@ -49,16 +50,25 @@ Cx4 SENSE(
 {
   if (method == "direct") {
     log.info("Creating SENSE maps from main image data");
-    Cx3 lo_data = data;
+    Cx3 lo_data(data.dimensions());
     auto const lo_traj = traj.trim(sense_res, lo_data);
     Gridder lo_gridder(lo_traj, gridder.oversample(), gridder.kernel(), false, log);
     SDC::Load("pipe", lo_traj, lo_gridder, log);
     return Direct(lo_gridder, lo_data, log);
+  } else if (method == "espirit") {
+    Cx3 lo_data(data.dimensions());
+    auto const lo_traj = traj.trim(sense_res, lo_data);
+    Gridder lo_gridder(lo_traj, gridder.oversample(), gridder.kernel(), false, log);
+    SDC::Load("pipe", lo_traj, lo_gridder, log);
+    return ESPIRIT(gridder, lo_gridder, lo_data, 20, 7, 0.2, log);
   } else {
     log.info("Loading SENSE data from {}", method);
     HD5::Reader reader(method, log);
     Trajectory const cal_traj = reader.readTrajectory();
     Gridder cal_gridder(cal_traj, gridder.oversample(), gridder.kernel(), false, log);
+    if (cal_gridder.info().matrix != gridder.info().matrix) {
+      log.fail("Calibration data has incompatible matrix size");
+    }
     SDC::Load("pipe", cal_traj, cal_gridder, log);
     Cx3 cal_data = cal_traj.info().noncartesianVolume();
     reader.readNoncartesian(0, cal_data);

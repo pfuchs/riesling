@@ -30,12 +30,14 @@ add_library(vineyard
     src/coils.cpp
     src/compressor.cpp
     src/cropper.cpp
+    src/espirit.cpp
     src/fft1.cpp
     src/fft3.cpp
     src/fft3n.cpp
     src/fft_util.cpp
     src/filter.cpp
     src/gridder.cpp
+    src/hankel.cpp
     src/io_hd5.cpp
     src/io_nifti.cpp
     src/kernel.cpp

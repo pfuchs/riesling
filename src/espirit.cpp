@@ -3,6 +3,7 @@
 #include "cropper.h"
 #include "fft3n.h"
 #include "gridder.h"
+#include "hankel.h"
 #include "io_nifti.h"
 #include "padder.h"
 #include "tensorOps.h"
@@ -11,48 +12,19 @@
 #include <Eigen/SVD>
 
 Cx4 ESPIRIT(
-    Info const &info,
-    R3 const &traj,
-    float const os,
-    Kernel *const kernel,
+    Gridder const &hi_gridder,
+    Gridder const &lo_gridder,
+    Cx3 const &data,
     long const calSz,
     long const kSz,
     float const retain,
-    Cx3 const &data,
     Log &log)
 {
-  // Grid and heavily smooth each coil image, accumulate combined image
-  float const sense_res = 6.f;
   log.info(FMT_STRING("ESPIRIT Calibration Size {} Kernel Size {}"), calSz, kSz);
-  Gridder gridder(info, traj, os, kernel, false, log, sense_res, false);
-  Cx4 grid = gridder.newGrid();
-  FFT3N fftGrid(grid, log);
-  grid.setZero();
+  Cx4 lores = lo_gridder.newGrid();
+  FFT3N fftGrid(lores, log);
   gridder.toCartesian(data, grid);
-  // Now reshape
-  long const gridHalf = grid.dimension(1) / 2;
-  long const calHalf = calSz / 2;
-  long const kernelHalf = kSz / 2;
-  long const nChan = grid.dimension(0);
-  long const calTotal = calSz * calSz * calSz;
-  Cx7 kernels(nChan, kSz, kSz, kSz, calSz, calSz, calSz);
-  fmt::print(
-      FMT_STRING("kernels {} grid {}\n"),
-      fmt::join(kernels.dimensions(), ","),
-      fmt::join(grid.dimensions(), ","));
-  long const startPoint = gridHalf - calHalf - kernelHalf;
-  for (long iz = 0; iz < calSz; iz++) {
-    for (long iy = 0; iy < calSz; iy++) {
-      for (long ix = 0; ix < calSz; ix++) {
-        long const st_z = startPoint + iz;
-        long const st_y = startPoint + iy;
-        long const st_x = startPoint + ix;
-        kernels.chip(iz, 6).chip(iy, 5).chip(ix, 4) =
-            grid.slice(Sz4{0, st_x, st_y, st_z}, Sz4{nChan, kSz, kSz, kSz});
-      }
-    }
-  }
-  Eigen::MatrixXcf kMat = CollapseToMatrix<Cx7, 4>(kernels);
+  Cx2 const kernels = ToKernels(grid, 7, 24, (2 * lo_gridder.info().read_gap + 1), log);
 
   auto const bdcsvd = kMat.transpose().bdcSvd(Eigen::ComputeThinV);
   long const nRetain = std::lrintf(retain * calTotal);

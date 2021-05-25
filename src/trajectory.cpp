@@ -70,7 +70,7 @@ float Trajectory::merge(int16_t const read, int32_t const spoke) const
   }
 }
 
-Trajectory Trajectory::trim(float const res, Cx3 &data) const
+Trajectory Trajectory::trim(float const res, Cx3 &data, bool const shrink) const
 {
   if (res <= 0.f) {
     log_.fail("Asked for trajectory with resolution {} which is less than or equal to zero", res);
@@ -92,6 +92,9 @@ Trajectory Trajectory::trim(float const res, Cx3 &data) const
     }
   }
   new_info.read_points = hi - lo;
+  if (shrink) {
+    new_info.matrix = Array3l::Constant(2 * new_info.read_points / info_.read_oversample());
+  }
   log_.info("Trimming data to read points {}-{}", lo, hi);
   R3 new_points = points_.slice(Sz3{0, lo, 0}, Sz3{3, new_info.read_points, info_.spokes_total()});
   Cx3 const temp =
