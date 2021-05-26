@@ -30,6 +30,7 @@ add_library(vineyard
     src/coils.cpp
     src/compressor.cpp
     src/cropper.cpp
+    src/decomp.cpp
     src/espirit.cpp
     src/fft1.cpp
     src/fft3.cpp
@@ -44,7 +45,6 @@ add_library(vineyard
     src/kernel_kb.cpp
     src/kernel_nn.cpp
     src/log.cpp
-    src/lowrank.cpp
     src/padder.cpp
     src/phantom_sphere.cpp
     src/phantom_shepplogan.cpp
@@ -60,7 +60,6 @@ add_library(vineyard
     src/zinfandel.cpp
 )
 
-# hdf5::hdf5-static hdf5::hdf5_hl-static hdf5::hdf5_cpp-static hdf5::hdf5_hl_cpp-static
 target_link_libraries(vineyard PUBLIC
     ${CMAKE_THREAD_LIBS_INIT}
     Eigen3::Eigen
@@ -107,6 +106,7 @@ add_executable(prufung
     test/fft3.cpp
     test/fft3n.cpp
     test/gridder.cpp
+    test/hankel.cpp
     test/kernel_kb.cpp
     test/zinfandel.cpp
 )

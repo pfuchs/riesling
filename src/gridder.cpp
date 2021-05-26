@@ -63,7 +63,7 @@ void Gridder::genCoords(Trajectory const &traj, long const nomRad)
       // Only grid lo-res to where hi-res begins (i.e. fill the dead-time gap)
       // Otherwise leave space for kernel
       float const maxRad = (is < info_.spokes_lo)
-                               ? oversample_ * info_.read_gap / info_.spoke_oversamp()
+                               ? oversample_ * info_.read_gap / info_.read_oversamp()
                                : nomRad - kernel_->radius();
       if (xyz.norm() <= maxRad) {
         Size3 const gp = nearby(xyz).cast<int16_t>();

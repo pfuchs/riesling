@@ -93,7 +93,7 @@ Trajectory Trajectory::trim(float const res, Cx3 &data, bool const shrink) const
   }
   new_info.read_points = hi - lo;
   if (shrink) {
-    new_info.matrix = Array3l::Constant(2 * new_info.read_points / info_.read_oversample());
+    new_info.matrix = Array3l::Constant(2 * new_info.read_points / info_.read_oversamp());
   }
   log_.info("Trimming data to read points {}-{}", lo, hi);
   R3 new_points = points_.slice(Sz3{0, lo, 0}, Sz3{3, new_info.read_points, info_.spokes_total()});

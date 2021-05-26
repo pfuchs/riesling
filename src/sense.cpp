@@ -50,23 +50,26 @@ Cx4 SENSE(
 {
   if (method == "direct") {
     log.info("Creating SENSE maps from main image data");
-    Cx3 lo_data(data.dimensions());
+    Cx3 lo_data = data;
     auto const lo_traj = traj.trim(sense_res, lo_data);
     Gridder lo_gridder(lo_traj, gridder.oversample(), gridder.kernel(), false, log);
     SDC::Load("pipe", lo_traj, lo_gridder, log);
     return Direct(lo_gridder, lo_data, log);
   } else if (method == "espirit") {
-    Cx3 lo_data(data.dimensions());
+    Cx3 lo_data = data;
     auto const lo_traj = traj.trim(sense_res, lo_data);
+    log.image(
+        Cx3(lo_data.slice(Sz3{0, 0, 0}, Sz3{lo_data.dimension(0), lo_data.dimension(1), 256})),
+        "sense-lo-data.nii");
     Gridder lo_gridder(lo_traj, gridder.oversample(), gridder.kernel(), false, log);
     SDC::Load("pipe", lo_traj, lo_gridder, log);
-    return ESPIRIT(gridder, lo_gridder, lo_data, 20, 7, 0.2, log);
+    return ESPIRIT(gridder, lo_gridder, lo_data, 12, 7, log);
   } else {
     log.info("Loading SENSE data from {}", method);
     HD5::Reader reader(method, log);
     Trajectory const cal_traj = reader.readTrajectory();
     Gridder cal_gridder(cal_traj, gridder.oversample(), gridder.kernel(), false, log);
-    if (cal_gridder.info().matrix != gridder.info().matrix) {
+    if ((cal_gridder.info().matrix != gridder.info().matrix).any()) {
       log.fail("Calibration data has incompatible matrix size");
     }
     SDC::Load("pipe", cal_traj, cal_gridder, log);

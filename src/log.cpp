@@ -42,7 +42,7 @@ void Log::progress(long const ii, long const n) const
     long const step = n / steps;
     if (ii % step == 0) {
       float progress = (100.f * ii) / n;
-      if (progress < 99.f) { // Allow fuzz
+      if (progress < 91.f) {
         fmt::print(stderr, FMT_STRING("{:.0f}%..."), progress);
       } else {
         fmt::print(stderr, FMT_STRING("{:.0f}%\n"), progress);
