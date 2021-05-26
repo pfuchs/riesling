@@ -2,7 +2,7 @@
 
 #include "tensorOps.h"
 
-Cx2 ToKernels(Cx4 const &grid, long const kSz, long const calSz, long const gapSz, Log &log)
+Cx5 ToKernels(Cx4 const &grid, long const kSz, long const calSz, long const gapSz, Log &log)
 {
   long const nchan = grid.dimension(0);
   long const gridHalf = grid.dimension(1) / 2;
@@ -18,10 +18,10 @@ Cx2 ToKernels(Cx4 const &grid, long const kSz, long const calSz, long const gapS
   long const gapHalf = gapSz / 2;
   long const gapK = gapSz + 2 * kHalf;
   long const rows = nchan * (kSz * kSz * kSz - gapK * gapK * gapK);
-  long const cols = calSz * calSz * calSz;
-  Cx2 kernels(rows, cols);
+  long const nk = calSz * calSz * calSz;
+  Cx5 kernels(nchan, kSz, kSz, kSz, nk);
 
-  long col = 0;
+  long l = 0;
   long const st = gridHalf - calHalf - kHalf;
   long const gapSt = calHalf - gapHalf - kHalf;
   long const gapEnd = calHalf + gapHalf + kHalf;
@@ -29,22 +29,20 @@ Cx2 ToKernels(Cx4 const &grid, long const kSz, long const calSz, long const gapS
     if (gapSz && ((iz < gapSt) || (iz > gapEnd))) {
       long const st_z = st + iz;
       for (long iy = 0; iy < calSz; iy++) {
-
-        if (gapSz && ((iy < gapSt) || (ix > gapEnd))) {
+        if (gapSz && ((iy < gapSt) || (iy > gapEnd))) {
           long const st_y = st + iy;
           for (long ix = 0; ix < calSz; ix++) {
             if (gapSz && ((ix < gapSt) || (ix > gapEnd))) {
               long const st_x = st + ix;
-              kernels.chip(col, 1) = grid.slice(Sz4{0, st_x, st_y, st_z}, Sz4{nchan, kSz, kSz, kSz})
-                                         .reshape(Sz1{rows});
-              col++;
+              kernels.chip(k, 4) = grid.slice(Sz4{0, st_x, st_y, st_z}, Sz4{nchan, kSz, kSz, kSz});
+              k++;
             }
           }
         }
       }
     }
   }
-  assert(col == cols);
+  assert(k == nk);
   return kernels;
 }
 

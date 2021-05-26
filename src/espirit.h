@@ -9,5 +9,4 @@ Cx4 ESPIRIT(
     Cx3 const &data,
     long const calSz,
     long const kernelSz,
-    float const retain,
     Log &log);

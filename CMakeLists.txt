@@ -44,6 +44,7 @@ add_library(vineyard
     src/kernel_kb.cpp
     src/kernel_nn.cpp
     src/log.cpp
+    src/lowrank.cpp
     src/padder.cpp
     src/phantom_sphere.cpp
     src/phantom_shepplogan.cpp
