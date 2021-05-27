@@ -31,9 +31,7 @@ Cx4 Direct(Gridder const &gridder, Cx3 const &data, Log &log)
       gridder.oversample(),
       start_rad,
       end_rad);
-  log.image(grid, "before.nii");
   KSTukey(start_rad, end_rad, 0.f, grid, log);
-  log.image(grid, "after.nii");
   fftN.reverse();
   rss.device(Threads::GlobalDevice()) = (grid * grid.conjugate()).real().sum(Sz1{0}).sqrt();
   log.info("Normalizing channel images");
