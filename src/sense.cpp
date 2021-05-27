@@ -1,5 +1,6 @@
 #include "sense.h"
 
+#include "cropper.h"
 #include "espirit.h"
 #include "fft3n.h"
 #include "filter.h"
@@ -57,13 +58,32 @@ Cx4 SENSE(
     return Direct(lo_gridder, lo_data, log);
   } else if (method == "espirit") {
     Cx3 lo_data = data;
-    auto const lo_traj = traj.trim(sense_res, lo_data);
+    auto const lo_traj = traj.trim(sense_res, lo_data, true);
     log.image(
         Cx3(lo_data.slice(Sz3{0, 0, 0}, Sz3{lo_data.dimension(0), lo_data.dimension(1), 256})),
         "sense-lo-data.nii");
     Gridder lo_gridder(lo_traj, gridder.oversample(), gridder.kernel(), false, log);
     SDC::Load("pipe", lo_traj, lo_gridder, log);
-    return ESPIRIT(gridder, lo_gridder, lo_data, 12, 7, log);
+
+    // Set this up for upsampling
+    Cx4 lores = lo_gridder.newGrid();
+    FFT3N lo_fft(lores, log);
+    Cx4 hires = gridder.newGrid();
+    FFT3N hi_fft(hires, log);
+
+    lores = ESPIRIT(lo_gridder, lo_data, 16, 7, log);
+    Cropper const cropper(
+        Dims3{hires.dimension(1), hires.dimension(2), hires.dimension(3)},
+        Dims3{lores.dimension(1), lores.dimension(2), lores.dimension(3)},
+        log);
+    log.info(FMT_STRING("Upsample maps"));
+
+    lo_fft.forward(lores);
+    hires.setZero();
+    cropper.crop4(hires) = lores;
+    hi_fft.reverse(hires);
+    log.image(hires, "espirit-hires.nii");
+    return hires;
   } else {
     log.info("Loading SENSE data from {}", method);
     HD5::Reader reader(method, log);

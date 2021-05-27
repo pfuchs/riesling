@@ -18,13 +18,20 @@ Cx5 LowRank(Cx5 const &mIn, long const nRetain, Log const &log)
   return out;
 }
 
-void PCA(Cx2 const &gramIn, Cx2 &vecIn, Cx1 &valIn)
+Cx2 Covariance(Cx2 const &data)
+{
+  Cx const scale(1.f / data.dimension(1));
+  return data.conjugate().contract(data, Eigen::IndexPairList<Eigen::type2indexpair<1, 1>>()) *
+         scale;
+}
+
+void PCA(Cx2 const &gramIn, Cx2 &vecIn, R1 &valIn)
 {
   Eigen::Map<Eigen::MatrixXcf const> gram(gramIn.data(), gramIn.dimension(0), gramIn.dimension(1));
   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXcf> es;
   es.compute(gram);
   Eigen::Map<Eigen::MatrixXcf> vec(vecIn.data(), vecIn.dimension(0), vecIn.dimension(1));
-  Eigen::Map<Eigen::VectorXcf> val(valIn.data(), valIn.dimension(0));
+  Eigen::Map<Eigen::VectorXf> val(valIn.data(), valIn.dimension(0));
   assert(vec.rows() == gram.rows());
   assert(vec.cols() == gram.cols());
   assert(val.rows() == gram.rows());

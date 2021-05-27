@@ -92,11 +92,19 @@ Trajectory Trajectory::trim(float const res, Cx3 &data, bool const shrink) const
     }
   }
   new_info.read_points = hi - lo;
-  if (shrink) {
-    new_info.matrix = Array3l::Constant(2 * new_info.read_points / info_.read_oversamp());
-  }
   log_.info("Trimming data to read points {}-{}", lo, hi);
   R3 new_points = points_.slice(Sz3{0, lo, 0}, Sz3{3, new_info.read_points, info_.spokes_total()});
+  if (shrink) {
+    float const scale = 2 * new_info.read_points / info_.read_oversamp();
+    new_info.matrix = Array3l::Constant(scale);
+    // Assume this is the maximum radius
+    new_points = new_points / Norm(new_points.chip(0, 2).chip(new_info.read_points - 1, 1));
+    log_.info(
+        FMT_STRING("Reducing matrix from {} to {}"),
+        info_.matrix.transpose(),
+        new_info.matrix.transpose());
+  }
+
   Cx3 const temp =
       data.slice(Sz3{0, lo, 0}, Sz3{data.dimension(0), new_info.read_points, data.dimension(2)});
   data = temp;

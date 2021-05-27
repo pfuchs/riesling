@@ -102,6 +102,7 @@ target_include_directories(riesling PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(prufung
     test/main.cpp
     test/cropper.cpp
+    test/decomp.cpp
     test/fft1.cpp
     test/fft3.cpp
     test/fft3n.cpp
