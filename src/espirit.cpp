@@ -21,7 +21,8 @@ Cx4 ESPIRIT(Gridder const &gridder, Cx3 const &data, long const calSz, long cons
   gridder.toCartesian(data, lo_grid);
   log.image(lo_grid, "espirit-lo-grid.nii");
   log.info(FMT_STRING("Calculating k-space kernels"));
-  Cx5 const mini_kernels = LowRank(ToKernels(lo_grid, kSz, calSz, 0, log), retain, log);
+  long const gap = gridder.info().read_gap ? gridder.info().read_gap * 2 + 1 : 0;
+  Cx5 const mini_kernels = LowRank(ToKernels(lo_grid, kSz, calSz, gap, log), retain, log);
   log.image(Cx4(mini_kernels.chip(0, 4)), "espirit-mini-kernel0-ks.nii");
   log.image(Cx4(mini_kernels.chip(retain / 2, 4)), "espirit-mini-kernel1-ks.nii");
   log.image(Cx4(mini_kernels.chip(retain - 1, 4)), "espirit-mini-kernel2-ks.nii");
