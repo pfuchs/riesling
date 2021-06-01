@@ -42,6 +42,7 @@ Gridder::Gridder(
   } else {
     dims_ = {gridSz, gridSz, gridSz};
   }
+  log_.info(FMT_STRING("Grid size {}"), fmt::join(dims_, ","));
   genCoords(traj, (gridSz / 2) - 1);
   sortCoords();
 }
