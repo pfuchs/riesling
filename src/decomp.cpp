@@ -25,9 +25,12 @@ Cx2 Covariance(Cx2 const &data)
          scale;
 }
 
-void PCA(Cx2 const &gramIn, Cx2 &vecIn, R1 &valIn)
+void PCA(Cx2 const &gramIn, Cx2 &vecIn, R1 &valIn, Log const &log)
 {
   Eigen::Map<Eigen::MatrixXcf const> gram(gramIn.data(), gramIn.dimension(0), gramIn.dimension(1));
+  if (gram.adjoint() != gram) {
+    log.fail("Gram Matrix was not self-adjoint");
+  }
   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXcf> es;
   es.compute(gram);
   Eigen::Map<Eigen::MatrixXcf> vec(vecIn.data(), vecIn.dimension(0), vecIn.dimension(1));

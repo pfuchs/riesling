@@ -35,13 +35,13 @@ void Log::vfail(fmt::string_view fstr, fmt::format_args args) const
   exit(EXIT_FAILURE);
 }
 
-void Log::progress(long const ii, long const n) const
+void Log::progress(long const ii, long const lo, long const hi) const
 {
-  if ((out_level_ >= Level::Info)) {
+  if ((out_level_ >= Level::Info) && lo == 0) {
     constexpr long steps = 10;
-    long const step = n / steps;
+    long const step = (hi - lo) / steps;
     if (ii % step == 0) {
-      float progress = (100.f * ii) / n;
+      float progress = (100.f * ii) / (hi - lo);
       if (progress < 91.f) {
         fmt::print(stderr, FMT_STRING("{:.0f}%..."), progress);
       } else {

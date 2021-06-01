@@ -10,7 +10,7 @@
 #include "tensorOps.h"
 #include "threads.h"
 
-float const sense_res = 8.f;
+float const sense_res = 10.f;
 
 Cx4 Direct(Gridder const &gridder, Cx3 const &data, Log &log)
 {
@@ -68,17 +68,20 @@ Cx4 SENSE(
     FFT3N lo_fft(lores, log);
     Cx4 hires = gridder.newGrid();
     FFT3N hi_fft(hires, log);
-
-    lores = ESPIRIT(lo_gridder, lo_data, 16, 7, log);
     Cropper const cropper(
         Dims3{hires.dimension(1), hires.dimension(2), hires.dimension(3)},
         Dims3{lores.dimension(1), lores.dimension(2), lores.dimension(3)},
         log);
-    log.info(FMT_STRING("Upsample maps"));
 
+    lores = ESPIRIT(lo_gridder, lo_data, 4, 9, log);
+    log.info(FMT_STRING("Upsample maps"));
     lo_fft.forward(lores);
+    log.image(lores, "espirit-lores-ks.nii");
+    KSTukey(0.5f, 1.f, 0.f, lores, log);
+    log.image(lores, "espirit-lores-filtered.nii");
     hires.setZero();
-    cropper.crop4(hires) = lores;
+    cropper.crop4(hires) = lores * lores.constant(lo_fft.scale() / hi_fft.scale());
+    log.image(hires, "espirit-hires-ks.nii");
     hi_fft.reverse(hires);
     log.image(hires, "espirit-hires.nii");
     return hires;

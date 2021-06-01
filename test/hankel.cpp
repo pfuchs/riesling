@@ -7,22 +7,24 @@ TEST_CASE("Hankel", "[Hankel]")
   Log log;
 
   long const nchan = 2;
-  long const gridSz = 8;
+  long const gridSz = 10;
   Cx4 grid(nchan, gridSz, gridSz, gridSz);
   grid.chip(0, 0).setConstant(1.f);
   grid.chip(1, 0).setConstant(2.f);
-  long const kSz = 3;
-  long const calSz = 5;
+  long const kRad = 2;
+  long const calRad = 4;
 
   SECTION("No Gap")
   {
-    Cx5 k = ToKernels(grid, kSz, calSz, 0, log);
+    Cx5 k = ToKernels(grid, kRad, calRad, 0, log);
 
     CHECK(k.dimension(0) == nchan);
-    CHECK(k.dimension(1) == kSz);
-    CHECK(k.dimension(2) == kSz);
-    CHECK(k.dimension(3) == kSz);
-    CHECK(k.dimension(4) == (calSz * calSz * calSz));
+    long const kW = 2 * kRad - 1;
+    CHECK(k.dimension(1) == kW);
+    CHECK(k.dimension(2) == kW);
+    CHECK(k.dimension(3) == kW);
+    long const calW = 2 * calRad - 1;
+    CHECK(k.dimension(4) == (calW * calW * calW));
     CHECK(k(0, 0, 0, 0, 0) == 1.f);
     CHECK(k(1, 0, 0, 0, 0) == 2.f);
   }
@@ -30,14 +32,16 @@ TEST_CASE("Hankel", "[Hankel]")
   SECTION("Gap")
   {
     long const gap = 1;
-    grid.chip(4, 3).chip(4, 2).chip(4, 1).setZero();
-    Cx5 k = ToKernels(grid, kSz, calSz, gap, log);
+    grid.chip(gridSz / 2, 3).chip(gridSz / 2, 2).chip(gridSz / 2, 1).setZero();
+    Cx5 k = ToKernels(grid, kRad, calRad, gap, log);
     CHECK(k.dimension(0) == nchan);
-    CHECK(k.dimension(1) == kSz);
-    CHECK(k.dimension(2) == kSz);
-    CHECK(k.dimension(3) == kSz);
-    long const gSz = gap + 2 * (kSz / 2);
-    CHECK(k.dimension(4) == (calSz * calSz * calSz) - (gSz * gSz * gSz));
+    long const kW = 2 * kRad - 1;
+    CHECK(k.dimension(1) == kW);
+    CHECK(k.dimension(2) == kW);
+    CHECK(k.dimension(3) == kW);
+    long const calW = 2 * calRad - 1;
+    long const gapW = ((gap + kRad) * 2) - 1;
+    CHECK(k.dimension(4) == (calW * calW * calW) - (gapW * gapW * gapW));
     CHECK(k(0, 0, 0, 0, 0) == 1.f);
     CHECK(k(1, 0, 0, 0, 0) == 2.f);
     CHECK(B0((k.real() > k.real().constant(0.f)).all())());

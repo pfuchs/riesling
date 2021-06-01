@@ -2,51 +2,73 @@
 
 #include "tensorOps.h"
 
-Cx5 ToKernels(Cx4 const &grid, long const kSz, long const calSz, long const gapSz, Log &log)
+Cx5 ToKernels(Cx4 const &grid, long const kRad, long const calRad, long const gapRad, Log &log)
 {
   long const nchan = grid.dimension(0);
   long const gridHalf = grid.dimension(1) / 2;
-  long const calHalf = calSz / 2;
-  long const kHalf = kSz / 2;
-  if (grid.dimension(1) < (calSz + kSz - 1)) {
-    log.fail(
-        FMT_STRING("Grid size {} not large enough for block size {} + kernel size {}"),
-        grid.dimension(1),
-        calSz,
-        kSz);
+  long const calW = (calRad * 2) - 1;
+  long const kW = (kRad * 2) - 1;
+  long const gapPlusKW = ((gapRad + kRad) * 2) - 1;
+  long const nSkip = gapRad ? gapPlusKW * gapPlusKW * gapPlusKW : 0;
+  long const nk = calW * calW * calW - nSkip;
+  if (nk < 1) {
+    log.fail(FMT_STRING("No kernels to Hankelfy"));
   }
-  long const gapHalf = gapSz / 2;
-  long const gapK = gapSz ? gapSz + 2 * kHalf : 0;
-  long const nk = calSz * calSz * calSz - (gapK * gapK * gapK);
-  Cx5 kernels(nchan, kSz, kSz, kSz, nk);
+  Cx5 kernels(nchan, kW, kW, kW, nk);
 
   long k = 0;
-  long nskip = 0;
-  long const gapSt = calHalf - gapHalf - kHalf;
-  long const gapEnd = calHalf + gapHalf + kHalf;
+  long s = 0;
+  long const gapSt = (calRad - 1) - (gapRad - 1) - kRad;
+  long const gapEnd = (calRad - 1) + gapRad + kRad;
 
-  long const st = gridHalf - calHalf - kHalf;
-  log.info(FMT_STRING("Hankelfying {} kernels"), nk);
-  for (long iz = 0; iz < calSz; iz++) {
+  long const st = gridHalf - (calRad - 1) - (kRad - 1);
+  if (st < 0) {
+    log.fail(
+        FMT_STRING("Grid size {} not large enough for calibration radius {} + kernel radius {}"),
+        grid.dimension(1),
+        calRad,
+        kRad);
+  }
+
+  log.info(
+      FMT_STRING("Hankel calibration rad {} kernel rad {} gap {}, {} kernels"),
+      calRad,
+      kRad,
+      gapRad,
+      nk);
+  for (long iz = 0; iz < calW; iz++) {
     long const st_z = st + iz;
-    for (long iy = 0; iy < calSz; iy++) {
+    for (long iy = 0; iy < calW; iy++) {
       long const st_y = st + iy;
-      for (long ix = 0; ix < calSz; ix++) {
-        if (gapSz && (ix >= gapSt && ix <= gapEnd) && (iy >= gapSt && iy <= gapEnd) &&
-            (iz >= gapSt && iz <= gapEnd)) {
-          nskip++;
+      for (long ix = 0; ix < calW; ix++) {
+        if (gapRad && (ix >= gapSt && ix < gapEnd) && (iy >= gapSt && iy < gapEnd) &&
+            (iz >= gapSt && iz < gapEnd)) {
+          s++;
+          // fmt::print("SKIP {} {} {} GAP {} {}\n", iz, iy, ix, gapSt, gapEnd);
           continue;
         }
+
         long const st_x = st + ix;
         Sz4 sst{0, st_x, st_y, st_z};
-        Sz4 ssz{nchan, kSz, kSz, kSz};
+        Sz4 ssz{nchan, kW, kW, kW};
+        // fmt::print(
+        //     "USE  {} {} {} GAP {} {} ST {} SZ {} k {} dim {}\n",
+        //     iz,
+        //     iy,
+        //     ix,
+        //     gapSt,
+        //     gapEnd,
+        //     fmt::join(sst, ","),
+        //     fmt::join(ssz, ","),
+        //     k,
+        //     kernels.dimension(4));
         kernels.chip(k, 4) = grid.slice(sst, ssz);
         k++;
       }
     }
   }
+  assert(s == nSkip);
   assert(k == nk);
-  log.image(Cx4(kernels.chip(0, 4)), "hankel-kernel0.nii");
   return kernels;
 }
 
