@@ -3,18 +3,22 @@
 #include <Eigen/Eigenvalues>
 #include <Eigen/SVD>
 
-Cx5 LowRank(Cx5 const &mIn, long const nRetain, Log const &log)
+Cx5 LowRankKernels(Cx5 const &mIn, float const thresh, Log const &log)
 {
-  long const rows = mIn.dimension(0) * mIn.dimension(1) * mIn.dimension(2) * mIn.dimension(3);
-  Eigen::Map<Eigen::MatrixXcf const> m(mIn.data(), rows, mIn.dimension(4));
+  long const kSz = mIn.dimension(0) * mIn.dimension(1) * mIn.dimension(2) * mIn.dimension(3);
+  long const nK = mIn.dimension(4);
+  if (nK < kSz) {
+    log.fail(FMT_STRING("Insufficient number of kernels {} for kernel size {}"), nK, kSz);
+  }
+  Eigen::Map<Eigen::MatrixXcf const> m(mIn.data(), kSz, nK);
+  log.info(FMT_STRING("SVD Kernel Size {} Kernels {}"), kSz, nK);
+  auto const svd = m.transpose().bdcSvd(Eigen::ComputeThinV);
+  Eigen::ArrayXf const vals = svd.singularValues();
+  long const nRetain = (vals > (vals[0] * thresh)).cast<int>().sum();
+  log.info(FMT_STRING("Retaining {} kernels"), nRetain);
   Cx5 out(mIn.dimension(0), mIn.dimension(1), mIn.dimension(2), mIn.dimension(3), nRetain);
-  Eigen::Map<Eigen::MatrixXcf> lr(out.data(), rows, nRetain);
-  log.info(FMT_STRING("SVD dimensions {}x{}"), m.rows(), m.cols());
-  auto const svd = m.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
-  log.info(FMT_STRING("Retaining {} singular vectors for low-rank matrix"), nRetain);
-  Eigen::VectorXf const vals = svd.singularValues();
-  lr = svd.matrixU().leftCols(nRetain) * vals.head(nRetain).asDiagonal() *
-       svd.matrixV().leftCols(nRetain).adjoint();
+  Eigen::Map<Eigen::MatrixXcf> lr(out.data(), kSz, nRetain);
+  lr = svd.matrixV().leftCols(nRetain).conjugate();
   return out;
 }
 

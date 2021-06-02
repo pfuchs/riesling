@@ -10,7 +10,7 @@
 #include "tensorOps.h"
 #include "threads.h"
 
-float const sense_res = 10.f;
+float const sense_res = 6.f;
 
 Cx4 Direct(Gridder const &gridder, Cx3 const &data, Log &log)
 {
@@ -72,8 +72,9 @@ Cx4 SENSE(
         Dims3{hires.dimension(1), hires.dimension(2), hires.dimension(3)},
         Dims3{lores.dimension(1), lores.dimension(2), lores.dimension(3)},
         log);
-
-    lores = ESPIRIT(lo_gridder, lo_data, 4, 9, log);
+    long const kRad = 4;
+    long const calRad = kRad + 6 + (lo_gridder.info().spokes_lo ? 0 : lo_gridder.info().read_gap);
+    lores = ESPIRIT(lo_gridder, lo_data, kRad, calRad, log);
     log.info(FMT_STRING("Upsample maps"));
     lo_fft.forward(lores);
     log.image(lores, "espirit-lores-ks.nii");

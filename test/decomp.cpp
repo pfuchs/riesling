@@ -9,7 +9,7 @@ TEST_CASE("Decomp", "[Decomp]")
   long const nvar = 8;
   long const nsamp = 64;
 
-  SECTION("Covar-Rand")
+  SECTION("PCA")
   {
     Cx2 data(nvar, nsamp);
     data.setRandom();
@@ -23,5 +23,12 @@ TEST_CASE("Decomp", "[Decomp]")
     CHECK(gram(1, 1).imag() == Approx(0.f).margin(1.e-3f));
     CHECK(gram(1, 0).real() == Approx(gram(0, 1).real()).margin(1.e-3f));
     CHECK(gram(1, 0).imag() == Approx(-gram(0, 1).imag()).margin(1.e-3f));
+
+    Cx2 vecs(gram.dimensions());
+    R1 vals(gram.dimension(0));
+    PCA(gram, vecs, vals, log);
+    CHECK(vecs.dimension(0) == gram.dimension(0));
+    CHECK(vecs.dimension(1) == gram.dimension(1));
+    CHECK(vals.dimension(0) == gram.dimension(0));
   }
 }

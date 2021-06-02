@@ -39,9 +39,10 @@ void Log::progress(long const ii, long const lo, long const hi) const
 {
   if ((out_level_ >= Level::Info) && lo == 0) {
     constexpr long steps = 10;
-    long const step = (hi - lo) / steps;
-    if (ii % step == 0) {
-      float progress = (100.f * ii) / (hi - lo);
+    long const N = hi - lo;
+    long const step = N / steps;
+    if (step && ii % step == 0) { // Check for div by zero
+      float progress = (100.f * ii) / N;
       if (progress < 91.f) {
         fmt::print(stderr, FMT_STRING("{:.0f}%..."), progress);
       } else {
