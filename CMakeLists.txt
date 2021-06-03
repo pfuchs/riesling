@@ -56,6 +56,7 @@ add_library(vineyard
     src/threads.cpp
     src/trajectory.cpp
     src/traj_archimedean.cpp
+    src/vcc.cpp
     src/wavelets.cpp
     src/zinfandel.cpp
 )

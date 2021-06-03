@@ -6,9 +6,9 @@
 #include "filter.h"
 #include "gridder.h"
 #include "io_hd5.h"
-#include "sdc.h"
 #include "tensorOps.h"
 #include "threads.h"
+#include "vcc.h"
 
 float const sense_res = 6.f;
 
@@ -78,6 +78,7 @@ Cx4 SENSE(
     log.info(FMT_STRING("Upsample maps"));
     lo_fft.forward(lores);
     log.image(lores, "espirit-lores-ks.nii");
+    VCC(lores, log);
     KSTukey(0.5f, 1.f, 0.f, lores, log);
     log.image(lores, "espirit-lores-filtered.nii");
     hires.setZero();
