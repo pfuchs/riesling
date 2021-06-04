@@ -53,7 +53,9 @@ Cx4 SENSE(
     auto const lo_traj = traj.trim(sense_res, lo_data);
     Gridder lo_gridder(lo_traj, gridder.oversample(), gridder.kernel(), false, log);
     SDC::Load("pipe", lo_traj, lo_gridder, log);
-    return Direct(lo_gridder, lo_data, log);
+    Cx4 sense = Direct(lo_gridder, lo_data, log);
+    VCC(sense, log);
+    return sense;
   } else if (method == "espirit") {
     Cx3 lo_data = data;
     auto const lo_traj = traj.trim(sense_res, lo_data, true);
@@ -75,10 +77,10 @@ Cx4 SENSE(
     long const kRad = 4;
     long const calRad = kRad + 6 + (lo_gridder.info().spokes_lo ? 0 : lo_gridder.info().read_gap);
     lores = ESPIRIT(lo_gridder, lo_data, kRad, calRad, log);
+    VCC(lores, log);
     log.info(FMT_STRING("Upsample maps"));
     lo_fft.forward(lores);
     log.image(lores, "espirit-lores-ks.nii");
-    VCC(lores, log);
     KSTukey(0.5f, 1.f, 0.f, lores, log);
     log.image(lores, "espirit-lores-filtered.nii");
     hires.setZero();
