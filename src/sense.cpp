@@ -8,7 +8,7 @@
 #include "io_hd5.h"
 #include "tensorOps.h"
 #include "threads.h"
-#include "vcc.h"
+#include "vc.h"
 
 float const sense_res = 6.f;
 
@@ -54,7 +54,7 @@ Cx4 SENSE(
     Gridder lo_gridder(lo_traj, gridder.oversample(), gridder.kernel(), false, log);
     SDC::Load("pipe", lo_traj, lo_gridder, log);
     Cx4 sense = Direct(lo_gridder, lo_data, log);
-    VCC(sense, log);
+    VBC(sense, log);
     return sense;
   } else if (method == "espirit") {
     Cx3 lo_data = data;
@@ -77,7 +77,7 @@ Cx4 SENSE(
     long const kRad = 4;
     long const calRad = kRad + 6 + (lo_gridder.info().spokes_lo ? 0 : lo_gridder.info().read_gap);
     lores = ESPIRIT(lo_gridder, lo_data, kRad, calRad, log);
-    VCC(lores, log);
+    VBC(lores, log);
     log.info(FMT_STRING("Upsample maps"));
     lo_fft.forward(lores);
     log.image(lores, "espirit-lores-ks.nii");
