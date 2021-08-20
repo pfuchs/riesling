@@ -52,6 +52,9 @@ add_library(vineyard
     src/vc.cpp
     src/wavelets.cpp
     src/zinfandel.cpp
+    src/op/operator.cpp
+    src/op/crop.cpp
+    src/op/sense.cpp
 )
 
 target_link_libraries(vineyard PUBLIC
@@ -110,6 +113,8 @@ if( ${BUILD_TESTS} )
         test/kernel_kb.cpp
         test/sdc.cpp
         test/zinfandel.cpp
+        test/op/crop.cpp
+        test/op/sense.cpp
     )
     target_link_libraries(riesling-tests PUBLIC
         vineyard
