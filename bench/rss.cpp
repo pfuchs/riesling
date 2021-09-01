@@ -59,6 +59,26 @@ TEST_CASE("RSS")
             .sqrt();
   };
 
+  BENCHMARK("IndexList1-Real2")
+  {
+    sum.device(dev) =
+        (grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}) *
+         grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}).conjugate())
+            .sum(Eigen::IndexList<Eigen::type2index<0>>())
+            .real()
+            .sqrt();
+  };
+
+  BENCHMARK("IndexList1-Real3")
+  {
+    sum.device(dev) =
+        (grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}) *
+         grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}).conjugate())
+            .sum(Eigen::IndexList<Eigen::type2index<0>>())
+            .sqrt()
+            .real();
+  };
+
   BENCHMARK("IndexList2")
   {
     Eigen::IndexList<Eigen::type2index<0>, int, int, int> start;
