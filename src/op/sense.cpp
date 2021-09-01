@@ -36,14 +36,14 @@ void SenseOp::A(Input const &x, Output &y) const
         return std::make_pair(left, right);
       });
 
-  y.device(Threads::GlobalDevice()) = x.reshape(res).broadcast(brd).pad(paddings);
+  y.device(Threads::GlobalDevice()) = (x.reshape(res).broadcast(brd) * maps_).pad(paddings);
 }
 
 void SenseOp::Adj(Output const &x, Input &y) const
 {
   checkInputSize(y);
   checkOutputSize(x);
-  y.device(Threads::GlobalDevice()) = (x.slice(left_, size_) * maps_.conjugate()).sum(Sz1{0});
+  y.device(Threads::GlobalDevice()) = ConjugateSum(x.slice(left_, size_), maps_.conjugate());
 }
 
 void SenseOp::AdjA(Input const &x, Input &y) const
