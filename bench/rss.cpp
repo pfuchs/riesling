@@ -10,46 +10,51 @@ TEST_CASE("RSS")
   int const qsz = sz / 4;
   using Cx4 = Eigen::Tensor<std::complex<float>, 4>;
   using Cx3 = Eigen::Tensor<std::complex<float>, 3>;
+  using R3 = Eigen::Tensor<float, 3>;
   using Dims4 = Cx4::Dimensions;
   Cx4 grid(16, sz, sz, sz);
   grid.setRandom();
-  Cx3 image(hsz, hsz, hsz);
-  image.setZero();
+  Cx3 xsum(hsz, hsz, hsz);
+  xsum.setZero();
+  R3 sum(hsz, hsz, hsz);
+  sum.setZero();
   Eigen::ThreadPool gp(std::thread::hardware_concurrency());
   Eigen::ThreadPoolDevice dev(&gp, gp.NumThreads());
 
   BENCHMARK("Naive")
   {
-    image =
+    xsum.device(dev) =
         (grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}) *
          grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}).conjugate())
             .sum(Eigen::array<int, 1>{0})
             .sqrt();
   };
 
-  BENCHMARK("Naive-MT")
+  BENCHMARK("Naive-Real")
   {
-    image.device(dev) =
+    sum.device(dev) =
         (grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}) *
          grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}).conjugate())
+            .real()
             .sum(Eigen::array<int, 1>{0})
             .sqrt();
   };
 
   BENCHMARK("IndexList1")
   {
-    image =
+    xsum.device(dev) =
         (grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}) *
          grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}).conjugate())
             .sum(Eigen::IndexList<Eigen::type2index<0>>())
             .sqrt();
   };
 
-  BENCHMARK("IndexList1-MT")
+  BENCHMARK("IndexList1-Real")
   {
-    image.device(dev) =
+    sum.device(dev) =
         (grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}) *
          grid.slice(Dims4{0, qsz, qsz, qsz}, Dims4{grid.dimension(0), hsz, hsz, hsz}).conjugate())
+            .real()
             .sum(Eigen::IndexList<Eigen::type2index<0>>())
             .sqrt();
   };
@@ -60,21 +65,34 @@ TEST_CASE("RSS")
     start.set(1, qsz);
     start.set(2, qsz);
     start.set(3, qsz);
-    image = (grid.slice(start, Dims4{grid.dimension(0), hsz, hsz, hsz}) *
-             grid.slice(start, Dims4{grid.dimension(0), hsz, hsz, hsz}).conjugate())
-                .sum(Eigen::IndexList<Eigen::type2index<0>>())
-                .sqrt();
+    xsum.device(dev) = (grid.slice(start, Dims4{grid.dimension(0), hsz, hsz, hsz}) *
+                        grid.slice(start, Dims4{grid.dimension(0), hsz, hsz, hsz}).conjugate())
+                           .sum(Eigen::IndexList<Eigen::type2index<0>>())
+                           .sqrt();
   };
 
-  BENCHMARK("IndexList2-MT")
+  BENCHMARK("IndexList2-Real")
   {
     Eigen::IndexList<Eigen::type2index<0>, int, int, int> start;
     start.set(1, qsz);
     start.set(2, qsz);
     start.set(3, qsz);
-    image.device(dev) = (grid.slice(start, Dims4{grid.dimension(0), hsz, hsz, hsz}) *
-                         grid.slice(start, Dims4{grid.dimension(0), hsz, hsz, hsz}).conjugate())
-                            .sum(Eigen::IndexList<Eigen::type2index<0>>())
-                            .sqrt();
+    sum.device(dev) = (grid.slice(start, Dims4{grid.dimension(0), hsz, hsz, hsz}) *
+                       grid.slice(start, Dims4{grid.dimension(0), hsz, hsz, hsz}).conjugate())
+                          .real()
+                          .sum(Eigen::IndexList<Eigen::type2index<0>>())
+                          .sqrt();
+  };
+
+  BENCHMARK("UnaryOp")
+  {
+    Eigen::IndexList<Eigen::type2index<0>, int, int, int> start;
+    start.set(1, qsz);
+    start.set(2, qsz);
+    start.set(3, qsz);
+    sum.device(dev) = grid.slice(start, Dims4{grid.dimension(0), hsz, hsz, hsz})
+                          .unaryExpr(Eigen::internal::scalar_abs2_op<std::complex<float>>())
+                          .sum(Eigen::IndexList<Eigen::type2index<0>>())
+                          .sqrt();
   };
 }
