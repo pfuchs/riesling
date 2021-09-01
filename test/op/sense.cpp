@@ -1,30 +1,31 @@
 #include "../../src/op/sense.h"
 #include "../../src/tensorOps.h"
 #include <catch2/catch.hpp>
-#include <fmt/ostream.h>
 
 TEST_CASE("ops-sense", "[ops]")
 {
   long const channels = 2, mapSz = 4, gridSz = 6;
 
+  // With credit to PyLops
   SECTION("Dot Test")
   {
-    Cx3 img(mapSz, mapSz, mapSz), img2(mapSz, mapSz, mapSz);
-    Cx4 maps(channels, mapSz, mapSz, mapSz), grid(channels, gridSz, gridSz, gridSz),
-        grid2(channels, gridSz, gridSz, gridSz);
+    Cx3 x(mapSz, mapSz, mapSz), u(mapSz, mapSz, mapSz);
+    Cx4 maps(channels, mapSz, mapSz, mapSz), y(channels, gridSz, gridSz, gridSz),
+        v(channels, gridSz, gridSz, gridSz);
 
-    img.setRandom();
-    grid.setRandom();
+    v.setRandom();
+    u.setRandom();
     // The maps need to be normalized for the Dot test
     maps.setRandom();
-    Cx3 rss = (maps * maps.conjugate()).sum(Sz1{0}).sqrt();
+    Cx3 rss = ConjugateSum(maps, maps).sqrt();
     maps = maps / Tile(rss, channels);
 
-    SenseOp sense(maps, grid.dimensions());
-    sense.A(img, grid2);
-    sense.Adj(grid, img2);
+    SenseOp sense(maps, y.dimensions());
+    sense.A(u, y);
+    sense.Adj(v, x);
 
-    fmt::print("img\n{}\nimg2\n{}\ngrid\n{}\ngrid2\n{}\n", img, img2, grid, grid2);
-    CHECK(Dot(img, img2) == Dot(grid2, grid));
+    auto const yy = Dot(y, v);
+    auto const xx = Dot(u, x);
+    CHECK(std::abs((yy - xx) / (yy + xx + 1.e-15f)) == Approx(0).margin(1.e-6));
   }
 }

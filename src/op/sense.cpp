@@ -43,7 +43,7 @@ void SenseOp::Adj(Output const &x, Input &y) const
 {
   checkInputSize(y);
   checkOutputSize(x);
-  y.device(Threads::GlobalDevice()) = ConjugateSum(x.slice(left_, size_), maps_.conjugate());
+  y.device(Threads::GlobalDevice()) = ConjugateSum(x.slice(left_, size_), maps_);
 }
 
 void SenseOp::AdjA(Input const &x, Input &y) const
