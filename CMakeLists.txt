@@ -53,7 +53,6 @@ add_library(vineyard
     src/wavelets.cpp
     src/zinfandel.cpp
 )
-
 target_link_libraries(vineyard PUBLIC
     ${CMAKE_THREAD_LIBS_INIT}
     Eigen3::Eigen
@@ -63,6 +62,12 @@ target_link_libraries(vineyard PUBLIC
     NIFTI::niftiio
     scn::scn
 )
+# GCC 8 supports std::filesystem but needs an extra linker flag
+find_library(STD_CPP_FS stdc++fs)
+if (STD_CPP_FS)
+    message(STATUS "-- Library stdc++fs found -> Linking with ${STD_CPP_FS}")
+    target_link_libraries(vineyard PUBLIC stdc++fs)
+endif()
 
 # Main executable
 add_executable(riesling
