@@ -62,10 +62,8 @@ target_link_libraries(vineyard PUBLIC
     NIFTI::niftiio
     scn::scn
 )
-# GCC 8 supports std::filesystem but needs an extra linker flag
-find_library(STD_CPP_FS stdc++fs)
-if (STD_CPP_FS)
-    message(STATUS "-- Library stdc++fs found -> Linking with ${STD_CPP_FS}")
+if (CMAKE_CXX_COMPILER_ID STREQUAL GNU)
+    # GCC 8 supports std::filesystem but needs an extra library
     target_link_libraries(vineyard PUBLIC stdc++fs)
 endif()
 
