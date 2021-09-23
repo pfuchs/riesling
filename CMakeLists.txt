@@ -6,7 +6,7 @@ include(GitVersion)
 
 # Deal with GCC 8 and std::filesystem
 # Thanks to Deniz Bahadir on the CMake Discourse
-add_link_options( "$<$<CXX_COMPILER_ID:GNU>:--as-needed>" )
+add_link_options( "$<$<CXX_COMPILER_ID:GNU>:LINKER:--as-needed>" )
 link_libraries( "$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:-lstdc++fs>" )
 
 find_package(Threads REQUIRED)
