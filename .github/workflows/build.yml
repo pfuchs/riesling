@@ -16,7 +16,7 @@ jobs:
         - {
           name: "Ubuntu GCC", artifact: "riesling-linux.tar.gz",
           os: ubuntu-18.04,
-          cc: "gcc-8", cxx: "g++-8"
+          cc: "gcc-9", cxx: "g++-9"
         }
         - {
           name: "macOS", artifact: "riesling-macos.tar.gz",
