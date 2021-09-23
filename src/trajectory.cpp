@@ -23,13 +23,13 @@ Trajectory::Trajectory(Info const &info, R3 const &points, Log const &log)
   if (info_.type == Info::Type::ThreeD) {
     float const maxCoord = Maximum(points_.abs());
     if (maxCoord > 0.5f) {
-      log_.fail("Maximum trajectory co-ordinate {} exceeded 0.5", maxCoord);
+      Log::Fail("Maximum trajectory co-ordinate {} exceeded 0.5", maxCoord);
     }
   } else {
     float const maxCoord = Maximum(
         points_.slice(Sz3{0, 0, 0}, Sz3{2, points_.dimension(1), points_.dimension(2)}).abs());
     if (maxCoord > 0.5f) {
-      log_.fail("Maximum in-plane trajectory {} co-ordinate exceeded 0.5", maxCoord);
+      Log::Fail("Maximum in-plane trajectory {} co-ordinate exceeded 0.5", maxCoord);
     }
   }
 
