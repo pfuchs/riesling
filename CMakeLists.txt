@@ -4,6 +4,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 include(BuildType)
 include(GitVersion)
 
+# Deal with GCC 8 and std::filesystem
+# Thanks to Deniz Bahadir on the CMake Discourse
+function( set_required_build_settings_for_GCC8 )
+    add_link_options( LINKER:--as-needed )
+    link_libraries( "$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:-lstdc++fs>" )
+endfunction()
+
 find_package(Threads REQUIRED)
 find_package(args REQUIRED)
 find_package(Catch2 REQUIRED)
@@ -62,10 +69,6 @@ target_link_libraries(vineyard PUBLIC
     NIFTI::niftiio
     scn::scn
 )
-if (CMAKE_CXX_COMPILER_ID STREQUAL GNU)
-    # GCC 8 supports std::filesystem but needs an extra library
-    target_link_libraries(vineyard PUBLIC stdc++fs)
-endif()
 
 # Main executable
 add_executable(riesling
