@@ -9,103 +9,23 @@
 #include <cfenv>
 #include <cmath>
 
-template <typename T>
-inline decltype(auto) nearby(T &&x)
-{
-  return x.array().unaryExpr([](float const &e) { return std::nearbyint(e); });
-}
-
-// Helper function to get a "good" FFT size. Empirical rule of thumb - multiples of 8 work well
-inline long fft_size(float const x)
-{
-  if (x > 8.f) {
-    return (std::lrint(x) + 7L) & ~7L;
-  } else {
-    return (long)std::ceil(x);
-  }
-}
-
-Gridder::Gridder(
-    Trajectory const &traj, float const os, Kernel *const kernel, bool const unsafe, Log &log)
-    : info_{traj.info()}
-    , oversample_{os}
-    , DCexp_{1.f}
+Gridder::Gridder(Mapping map, Kernel *const kernel, bool const unsafe, Log &log)
+    : mapping_{std::move(map)}
     , kernel_{kernel}
     , safe_{!unsafe}
     , log_{log}
+    , DCexp_{1.f}
 {
-
-  // Work out grid dimensions for the given oversampling
-  long const gridSz = fft_size(oversample_ * info_.matrix.maxCoeff());
-  if (info_.type == Info::Type::ThreeDStack) {
-    dims_ = Sz3{gridSz, gridSz, info_.matrix[2]};
-  } else {
-    dims_ = Sz3{gridSz, gridSz, gridSz};
-  }
-  log_.info(FMT_STRING("Grid size {}, oversample {}"), fmt::join(dims_, ","), oversample_);
-  genCoords(traj, (gridSz / 2) - 1);
-  sortCoords();
-}
-
-void Gridder::genCoords(Trajectory const &traj, long const nomRad)
-{
-  long const totalSz = info_.read_points * info_.spokes_total();
-  mapping_.cart.reserve(totalSz);
-  mapping_.noncart.reserve(totalSz);
-  mapping_.sdc.reserve(totalSz);
-  mapping_.offset.reserve(totalSz);
-
-  std::fesetround(FE_TONEAREST);
-  Size3 const center(dims_[0] / 2, dims_[1] / 2, dims_[2] / 2);
-  float const maxLoRad = nomRad * (float)(info_.read_gap) / (float)info_.read_points;
-  float const maxHiRad = nomRad - kernel_->radius();
-  auto start = log_.now();
-  for (int32_t is = 0; is < info_.spokes_total(); is++) {
-    for (int16_t ir = info_.read_gap; ir < info_.read_points; ir++) {
-      NoncartesianIndex const nc{.spoke = is, .read = ir};
-      Point3 const xyz = traj.point(ir, is, nomRad);
-
-      // Only grid lo-res to where hi-res begins (i.e. fill the dead-time gap)
-      // Otherwise leave space for kernel
-      float const maxRad = (is < info_.spokes_lo) ? maxLoRad : maxHiRad;
-      if (xyz.norm() <= maxRad) {
-        Size3 const gp = nearby(xyz).cast<int16_t>();
-        Size3 const cart = gp + center;
-        mapping_.cart.push_back(CartesianIndex{cart(0), cart(1), cart(2)});
-        mapping_.noncart.push_back(nc);
-        mapping_.sdc.push_back(1.f);
-        mapping_.offset.push_back(xyz - gp.cast<float>().matrix());
-      }
-    }
-  }
-  log_.info("Generated {} co-ordinates in {}", mapping_.cart.size(), log_.toNow(start));
-}
-
-void Gridder::sortCoords()
-{
-  auto const start = log_.now();
-  mapping_.sortedIndices.resize(mapping_.cart.size());
-  std::iota(mapping_.sortedIndices.begin(), mapping_.sortedIndices.end(), 0);
-  std::sort(
-      mapping_.sortedIndices.begin(),
-      mapping_.sortedIndices.end(),
-      [&](long const a, long const b) {
-        auto const &ac = mapping_.cart[a];
-        auto const &bc = mapping_.cart[b];
-        return (ac.z < bc.z) ||
-               ((ac.z == bc.z) && ((ac.y < bc.y) || ((ac.y == bc.y) && (ac.x < bc.x))));
-      });
-  log_.debug("Grid co-ord sorting: {}", log_.toNow(start));
 }
 
 Sz3 Gridder::gridDims() const
 {
-  return dims_;
+  return mapping_.cartDims;
 }
 
 Cx4 Gridder::newMultichannel(long const nc) const
 {
-  Cx4 g(nc, dims_[0], dims_[1], dims_[2]);
+  Cx4 g(nc, mapping_.cartDims[0], mapping_.cartDims[1], mapping_.cartDims[2]);
   g.setZero();
   return g;
 }
@@ -117,9 +37,6 @@ void Gridder::setSDC(float const d)
 
 void Gridder ::setSDC(R2 const &sdc)
 {
-  if (info_.read_points != sdc.dimension(0) || info_.spokes_total() != sdc.dimension(1)) {
-    Log::Fail("SDC dimensions {} do not match trajectory", fmt::join(sdc.dimensions(), ","));
-  }
   std::transform(
       mapping_.noncart.begin(),
       mapping_.noncart.end(),
@@ -140,16 +57,6 @@ void Gridder::setUnsafe()
 void Gridder::setSafe()
 {
   safe_ = false;
-}
-
-Info const &Gridder::info() const
-{
-  return info_;
-}
-
-float Gridder::oversample() const
-{
-  return oversample_;
 }
 
 Kernel *Gridder::kernel() const

@@ -30,15 +30,15 @@ TEST_CASE("Grid")
 
   float const os = 2.f;
   KaiserBessel kernel(3, os, true);
-  Gridder gridder(traj, os, &kernel, false, log);
-
-  auto nc = info.noncartesianVolume();
-  auto c = gridder.newMultichannel(C);
 
   BENCHMARK("Mapping")
   {
-    Gridder grid2(traj, os, &kernel, false, log);
+    traj.mapping(os, kernel.radius());
   };
+
+  Gridder gridder(traj.mapping(os, kernel.radius()), &kernel, false, log);
+  auto nc = info.noncartesianVolume();
+  auto c = gridder.newMultichannel(C);
 
   BENCHMARK("Noncartesian->Cartesian")
   {
