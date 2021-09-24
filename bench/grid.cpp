@@ -35,6 +35,11 @@ TEST_CASE("Grid")
   auto nc = info.noncartesianVolume();
   auto c = gridder.newMultichannel(C);
 
+  BENCHMARK("Mapping")
+  {
+    Gridder grid2(traj, os, &kernel, false, log);
+  };
+
   BENCHMARK("Noncartesian->Cartesian")
   {
     gridder.toCartesian(nc, c);

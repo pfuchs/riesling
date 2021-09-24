@@ -51,19 +51,19 @@ protected:
     int16_t read;
   };
 
-  struct Coords
+  struct Mapping
   {
-    CartesianIndex cart;
-    NoncartesianIndex noncart;
-    float sdc;
-    Point3 offset;
+    std::vector<CartesianIndex> cart;
+    std::vector<NoncartesianIndex> noncart;
+    std::vector<float> sdc;
+    std::vector<Point3> offset;
+    std::vector<int32_t> sortedIndices;
   };
 
   void genCoords(Trajectory const &traj, long const nomRad);
   void sortCoords();
   Info const info_;
-  std::vector<Coords> coords_;
-  std::vector<int32_t> sortedIndices_;
+  Mapping mapping_;
   Sz3 dims_;
   float oversample_, DCexp_, maxRad_;
   Kernel *kernel_;

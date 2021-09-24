@@ -14,7 +14,7 @@ struct GridOp final : Operator<4, 3>
   Output::Dimensions outSize() const;
 
 private:
-  // std::vector<Coords> coords_;
+  // std::vector<Mapping> coords_;
   // std::vector<int32_t> sortedIndices_;
   // Sz3 dims_;
   // float DCexp_;
