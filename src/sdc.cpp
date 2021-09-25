@@ -1,13 +1,14 @@
 #include "sdc.h"
 
-#include "gridder.h"
 #include "io_hd5.h"
 #include "kernel.h"
+#include "op/grid.h"
 #include "tensorOps.h"
+#include "threads.h"
 #include "trajectory.h"
 
 namespace SDC {
-void Load(std::string const &iname, Trajectory const &traj, Gridder &gridder, Log &log)
+void Load(std::string const &iname, Trajectory const &traj, GridOp &gridder, Log &log)
 {
   if (iname == "") {
     return;
@@ -34,7 +35,7 @@ void Load(std::string const &iname, Trajectory const &traj, Gridder &gridder, Lo
   }
 }
 
-R2 Pipe(Trajectory const &traj, Gridder &gridder, Log &log)
+R2 Pipe(Trajectory const &traj, GridOp &gridder, Log &log)
 {
   log.info("Using Pipe/Zwart/Menon SDC...");
   Cx3 W(1, traj.info().read_points, traj.info().spokes_total());
@@ -52,8 +53,8 @@ R2 Pipe(Trajectory const &traj, Gridder &gridder, Log &log)
   for (long ii = 0; ii < 10; ii++) {
     Wp.setZero();
     temp.setZero();
-    gridder.toCartesian(W, temp);
-    gridder.toNoncartesian(temp, Wp);
+    gridder.Adj(W, temp);
+    gridder.A(temp, Wp);
     Wp.device(Threads::GlobalDevice()) =
         (Wp.real() > 0.f).select(W / Wp, W); // Avoid divide by zero problems
     float const delta = R0((Wp - W).real().square().maximum())();

@@ -30,7 +30,6 @@ add_library(vineyard
     src/fft_plan.cpp
     src/fft_util.cpp
     src/filter.cpp
-    src/gridder.cpp
     src/hankel.cpp
     src/io_hd5.cpp
     src/io_nifti.cpp

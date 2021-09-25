@@ -5,10 +5,11 @@
 #include "cropper.h"
 #include "fft_plan.h"
 #include "filter.h"
-#include "gridder.h"
 #include "io_hd5.h"
 #include "io_nifti.h"
+#include "kernels.h"
 #include "log.h"
+#include "op/grid.h"
 #include "op/sense.h"
 #include "parse_args.h"
 #include "sense.h"
@@ -37,7 +38,7 @@ int main_cg(args::Subparser &parser)
   Kernel *kernel =
       kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD))
          : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1);
-  Gridder gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
+  GridOp gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
   SDC::Load(sdc.Get(), traj, gridder, log);
   gridder.setSDCExponent(sdc_exp.Get());
 
@@ -63,7 +64,7 @@ int main_cg(args::Subparser &parser)
     log.info("Calculating transfer function");
     Cx3 ones(1, info.read_points, info.spokes_total());
     ones.setConstant({1.0f});
-    gridder.toCartesian(ones, transfer);
+    gridder.Adj(ones, transfer);
   }
 
   auto dev = Threads::GlobalDevice();
@@ -81,7 +82,7 @@ int main_cg(args::Subparser &parser)
     auto const &start = log.now();
     y.setZero();
     grid.setZero();
-    gridder.toCartesian(x, grid);
+    gridder.Adj(x, grid);
     fft.reverse(grid);
     sense.Adj(grid, y);
     apodizer.deapodize(y);

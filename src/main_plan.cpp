@@ -1,10 +1,10 @@
 #include "types.h"
 
 #include "fft_plan.h"
-#include "gridder.h"
 #include "io_hd5.h"
 #include "kernels.h"
 #include "log.h"
+#include "op/grid.h"
 #include "parse_args.h"
 
 int main_plan(args::Subparser &parser)
@@ -21,7 +21,7 @@ int main_plan(args::Subparser &parser)
   Kernel *kernel =
       kb ? (Kernel *)new KaiserBessel(3, osamp.Get(), (traj.info().type == Info::Type::ThreeD))
          : (Kernel *)new NearestNeighbour();
-  Gridder gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
+  GridOp gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
   Cx4 grid4 = gridder.newMultichannel(traj.info().channels);
   Cx4 grid3 = gridder.newMultichannel(1);
   FFT::ThreeDMulti fft3(grid3, log);

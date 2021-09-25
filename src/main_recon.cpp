@@ -4,10 +4,11 @@
 #include "cropper.h"
 #include "fft_plan.h"
 #include "filter.h"
-#include "gridder.h"
 #include "io_hd5.h"
 #include "io_nifti.h"
+#include "kernels.h"
 #include "log.h"
+#include "op/grid.h"
 #include "parse_args.h"
 #include "sense.h"
 #include "tensorOps.h"
@@ -28,7 +29,7 @@ int main_recon(args::Subparser &parser)
   Kernel *kernel =
       kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD))
          : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1);
-  Gridder gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
+  GridOp gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
   SDC::Load(sdc.Get(), traj, gridder, log);
   gridder.setSDCExponent(sdc_exp.Get());
   Cropper cropper(info, gridder.gridDims(), out_fov.Get(), log);
@@ -58,7 +59,7 @@ int main_recon(args::Subparser &parser)
     auto const &vol_start = log.now();
     reader.readNoncartesian(iv, rad_ks);
     grid.setZero();
-    gridder.toCartesian(rad_ks, grid);
+    gridder.Adj(rad_ks, grid);
     log.info("FFT...");
     fft.reverse(grid);
     log.info("Channel combination...");

@@ -4,8 +4,9 @@
 #include "espirit.h"
 #include "fft_plan.h"
 #include "filter.h"
-#include "gridder.h"
 #include "io_hd5.h"
+#include "op/grid.h"
+#include "sdc.h"
 #include "tensorOps.h"
 #include "threads.h"
 #include "vc.h"
@@ -21,12 +22,12 @@ Cx4 DirectSENSE(
     float const lambda,
     Log &log)
 {
-  Gridder gridder(traj.mapping(os, kernel->radius(), 8.f), kernel, false, log);
+  GridOp gridder(traj.mapping(os, kernel->radius(), 8.f), kernel, false, log);
   SDC::Load("pipe", traj, gridder, log);
 
   Cx4 grid = gridder.newMultichannel(data.dimension(0));
   FFT::ThreeDMulti fftN(grid, log);
-  gridder.toCartesian(data, grid);
+  gridder.Adj(data, grid);
 
   float const end_rad = traj.info().voxel_size.minCoeff() / sense_res;
   float const start_rad = 0.5 * end_rad;

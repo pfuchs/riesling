@@ -5,10 +5,11 @@
 #include "cropper.h"
 #include "fft_plan.h"
 #include "filter.h"
-#include "gridder.h"
 #include "io_hd5.h"
 #include "io_nifti.h"
+#include "kernels.h"
 #include "log.h"
+#include "op/grid.h"
 #include "parse_args.h"
 #include "sense.h"
 #include "tensorOps.h"
@@ -39,7 +40,7 @@ int main_cgvar(args::Subparser &parser)
   Kernel *kernel =
       kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD))
          : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1);
-  Gridder gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
+  GridOp gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
   SDC::Load(sdc.Get(), traj, gridder, log);
   gridder.setSDCExponent(sdc_exp.Get());
 
@@ -67,7 +68,7 @@ int main_cgvar(args::Subparser &parser)
     auto const start = log.now();
     gridder.setSDCExponent(pre);
     transfer.device(dev) = transfer.constant(0.f);
-    gridder.toCartesian(ones, transfer);
+    gridder.Adj(ones, transfer);
 
     grid.device(dev) = grid.constant(0.f);
     iter_cropper.crop4(grid).device(dev) = sense * Tile(x, info.channels);
@@ -83,7 +84,7 @@ int main_cgvar(args::Subparser &parser)
     auto const &start = log.now();
     y.device(dev) = y.constant(0.f);
     gridder.setSDCExponent(1.f);
-    gridder.toCartesian(x, grid);
+    gridder.Adj(x, grid);
     fft.reverse(grid);
     y.device(dev) = (iter_cropper.crop4(grid) * sense.conjugate()).sum(Sz1{0});
     apodizer.deapodize(y);

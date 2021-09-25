@@ -4,10 +4,11 @@
 #include "cropper.h"
 #include "fft_plan.h"
 #include "filter.h"
-#include "gridder.h"
 #include "io_hd5.h"
 #include "io_nifti.h"
+#include "kernels.h"
 #include "log.h"
+#include "op/grid.h"
 #include "parse_args.h"
 #include "sense.h"
 #include "tensorOps.h"
@@ -41,7 +42,7 @@ int main_tgv(args::Subparser &parser)
   Kernel *kernel =
       kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD))
          : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1);
-  Gridder gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
+  GridOp gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
   SDC::Load(sdc.Get(), traj, gridder, log);
   gridder.setSDCExponent(sdc_exp.Get());
 
@@ -67,13 +68,13 @@ int main_tgv(args::Subparser &parser)
     grid.setZero();
     iter_cropper.crop4(grid).device(Threads::GlobalDevice()) = Tile(x, info.channels) * sense;
     fft.forward(grid);
-    gridder.toNoncartesian(grid, y);
+    gridder.A(grid, y);
     log.debug("Encode: {}", log.toNow(start));
   };
 
   DecodeFunction dec = [&](Cx3 const &y, Cx3 &x) {
     auto const &start = log.now();
-    gridder.toCartesian(y, grid);
+    gridder.Adj(y, grid);
     fft.reverse(grid);
     x.device(Threads::GlobalDevice()) = (iter_cropper.crop4(grid) * sense.conjugate()).sum(Sz1{0});
     apodizer.deapodize(x);

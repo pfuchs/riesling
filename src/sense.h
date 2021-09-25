@@ -1,10 +1,10 @@
 #pragma once
 
 #include "cropper.h"
-#include "gridder.h"
 #include "info.h"
 #include "io_hd5.h"
 #include "log.h"
+#include "op/grid.h"
 
 /*!
  * Calculates a set of SENSE maps from non-cartesian data, assuming an oversampled central region

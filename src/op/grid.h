@@ -1,24 +1,32 @@
 #pragma once
 
+#include "../kernel.h"
+#include "../trajectory.h"
 #include "operator.h"
 
 struct GridOp final : Operator<4, 3>
 {
-  GridOp();
+  GridOp(Mapping map, Kernel *const kernel, bool const unsafe, Log &log);
 
   void A(Input const &x, Output &y) const;
   void Adj(Output const &x, Input &y) const;
-  void AdjA(Input const &x, Input &y) const;
 
   Input::Dimensions inSize() const;
   Output::Dimensions outSize() const;
 
+  Sz3 gridDims() const;                        //!< Returns the dimensions of the grid
+  Cx4 newMultichannel(long const nChan) const; //!< Returns a correctly sized multi-channel grid
+  void setSDCExponent(float const dce);
+  void setSDC(float const dc);
+  void setSDC(R2 const &sdc);
+  void setUnsafe();
+  void setSafe();
+  Kernel *kernel() const;
+
 private:
-  // std::vector<Mapping> coords_;
-  // std::vector<int32_t> sortedIndices_;
-  // Sz3 dims_;
-  // float DCexp_;
-  // Kernel *kernel_;
-  // bool safe_;
-  // Log &log_;
+  Mapping mapping_;
+  Kernel *kernel_;
+  bool safe_;
+  Log &log_;
+  float DCexp_;
 };

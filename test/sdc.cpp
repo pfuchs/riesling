@@ -1,20 +1,22 @@
-#include "../src/gridder.h"
-#include "../src/log.h"
 #include "../src/sdc.h"
+#include "../src/kernels.h"
+#include "../src/log.h"
+#include "../src/op/grid.h"
 #include "../src/trajectory.h"
 #include <catch2/catch.hpp>
 
 TEST_CASE("SDC-Pipe", "[SDC]")
 {
   Log log;
-  Info info{.type = Info::Type::ThreeD,
-            .channels = 1,
-            .matrix = {4, 4, 4},
-            .read_points = 4,
-            .read_gap = 0,
-            .spokes_hi = 1,
-            .spokes_lo = 0,
-            .lo_scale = 1};
+  Info info{
+      .type = Info::Type::ThreeD,
+      .channels = 1,
+      .matrix = {4, 4, 4},
+      .read_points = 4,
+      .read_gap = 0,
+      .spokes_hi = 1,
+      .spokes_lo = 0,
+      .lo_scale = 1};
   float const osamp = 2.f;
   R3 points(3, 4, 1);
   points.setZero();
@@ -27,7 +29,7 @@ TEST_CASE("SDC-Pipe", "[SDC]")
   SECTION("NN")
   {
     NearestNeighbour kernel;
-    Gridder gridder(traj.mapping(osamp, kernel.radius()), &kernel, false, log);
+    GridOp gridder(traj.mapping(osamp, kernel.radius()), &kernel, false, log);
     R2 sdc = SDC::Pipe(traj, gridder, log);
     CHECK(sdc.dimension(0) == info.read_points);
     CHECK(sdc.dimension(1) == info.spokes_total());
