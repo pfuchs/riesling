@@ -2,7 +2,8 @@
 
 #include "../src/op/grid.h"
 #include "../src/info.h"
-#include "../src/kernel_kb.h"
+#include "../src/kernel_nn.h"
+#include "../src/op/grid_nn.h"
 #include "../src/traj_archimedean.h"
 
 #include <catch2/catch.hpp>
@@ -31,7 +32,7 @@ TEST_CASE("Grid")
   Trajectory traj(info, points, log);
 
   float const os = 2.f;
-  KaiserBessel kernel(3, os, true);
+  NearestNeighbour kernel(1);
 
   BENCHMARK("Mapping")
   {
@@ -39,6 +40,7 @@ TEST_CASE("Grid")
   };
 
   GridOp gridder(traj.mapping(os, kernel.radius()), &kernel, false, log);
+  GridNN gridnn(traj.mapping(os, kernel.radius()), false, log);
   auto nc = info.noncartesianVolume();
   auto c = gridder.newMultichannel(C);
 
@@ -49,5 +51,13 @@ TEST_CASE("Grid")
   BENCHMARK("Cartesian->Noncartesian")
   {
     gridder.A(c, nc);
+  };
+  BENCHMARK("NN Noncartesian->Cartesian")
+  {
+    gridnn.Adj(nc, c);
+  };
+  BENCHMARK("NN Cartesian->Noncartesian")
+  {
+    gridnn.A(c, nc);
   };
 }
