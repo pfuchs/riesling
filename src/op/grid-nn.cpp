@@ -1,4 +1,4 @@
-#include "grid_nn.h"
+#include "grid-nn.h"
 
 #include "../tensorOps.h"
 #include "../threads.h"

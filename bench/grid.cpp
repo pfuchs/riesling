@@ -3,7 +3,7 @@
 #include "../src/op/grid.h"
 #include "../src/info.h"
 #include "../src/kernel_nn.h"
-#include "../src/op/grid_nn.h"
+#include "../src/op/grid-nn.h"
 #include "../src/traj_archimedean.h"
 
 #include <catch2/catch.hpp>

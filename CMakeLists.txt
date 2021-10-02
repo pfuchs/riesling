@@ -54,7 +54,7 @@ add_library(vineyard
     src/op/operator.cpp
     src/op/crop.cpp
     src/op/grid.cpp
-    src/op/grid_nn.cpp
+    src/op/grid-nn.cpp
     src/op/sense.cpp
 )
 
