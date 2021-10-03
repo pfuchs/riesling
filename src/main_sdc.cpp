@@ -17,10 +17,7 @@ int main_sdc(args::Subparser &parser)
 
   R2 dc;
   if (sdc.Get() == "pipe") {
-    Kernel *kernel =
-        kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD))
-           : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1);
-    GridOp gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
+    auto gridder = make_grid(traj, osamp.Get(), kb, fastgrid, log);
     dc = SDC::Pipe(traj, gridder, log);
   } else if (sdc.Get() == "radial") {
     dc = SDC::Radial(traj, log);

@@ -113,12 +113,12 @@ int main_phantom(args::Subparser &parser)
   info.channels = sense_maps.dimension(0); // InterpSENSE may have changed this
 
   Trajectory traj(info, points, log);
-  GridOp hi_gridder(traj.mapping(grid_samp.Get(), kernel->radius()), kernel, false, log);
-  Cx4 grid = hi_gridder.newMultichannel(info.channels);
+  auto hi_gridder = make_grid(traj, grid_samp.Get(), kb, false, log);
+  Cx4 grid = hi_gridder->newMultichannel(info.channels);
   FFT::ThreeDMulti fft(grid, log); // FFTW needs temp space for planning
 
-  Cropper cropper(hi_gridder.gridDims(), info.matrix, log);
-  Apodizer apodizer(kernel, hi_gridder.gridDims(), cropper.size(), log);
+  Cropper cropper(hi_gridder->gridDims(), info.matrix, log);
+  Apodizer apodizer(kernel, hi_gridder->gridDims(), cropper.size(), log);
 
   Cx3 phan =
       shepplogan
@@ -143,7 +143,7 @@ int main_phantom(args::Subparser &parser)
 
   log.info("Sampling hi-res non-cartesian");
   Cx3 radial = info.noncartesianVolume();
-  hi_gridder.A(grid, radial);
+  hi_gridder->A(grid, radial);
 
   if (use_lores) {
     Info lo_info;
@@ -185,9 +185,9 @@ int main_phantom(args::Subparser &parser)
         lo_info,
         R3(lo_points / lo_points.constant(lowres_scale)), // Points need to be scaled down here
         log);
-    GridOp lo_gridder(lo_traj.mapping(grid_samp.Get(), kernel->radius()), kernel, false, log);
+    auto lo_gridder = make_grid(lo_traj, grid_samp.Get(), kb, false, log);
     Cx3 lo_radial = lo_info.noncartesianVolume();
-    lo_gridder.A(grid, lo_radial);
+    lo_gridder->A(grid, lo_radial);
     // Combine
     Cx3 const all_radial = lo_radial.concatenate(radial, 2);
     radial = all_radial;

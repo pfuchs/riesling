@@ -1,6 +1,6 @@
-#include "../src/kernels.h"
 #include "../src/log.h"
-#include "../src/op/grid.h"
+#include "../src/op/grid-kb.h"
+#include "../src/op/grid-nn.h"
 #include "../src/trajectory.h"
 #include <catch2/catch.hpp>
 
@@ -23,8 +23,7 @@ TEST_CASE("Gridding", "GRIDDING")
 
   SECTION("NN")
   {
-    NearestNeighbour kernel;
-    GridOp gridder(traj.mapping(osamp, kernel.radius()), &kernel, false, log);
+    GridNN gridder(traj, osamp, false, log);
     Cx3 rad = info.noncartesianVolume();
     CHECK(rad.dimension(0) == 4);
     CHECK(rad.dimension(1) == 1);
@@ -42,8 +41,7 @@ TEST_CASE("Gridding", "GRIDDING")
 
   SECTION("NN Multicoil")
   {
-    NearestNeighbour kernel;
-    GridOp gridder(traj.mapping(osamp, kernel.radius()), &kernel, false, log);
+    GridNN gridder(traj, osamp, false, log);
     Cx3 rad = info.noncartesianVolume();
     CHECK(rad.dimension(0) == info.channels);
     CHECK(rad.dimension(1) == info.read_points);
@@ -68,9 +66,7 @@ TEST_CASE("Gridding", "GRIDDING")
 
   SECTION("KB Multicoil")
   {
-    KaiserBessel kernel(3, osamp, true);
-    R3 const vals = kernel.kspace(Point3::Zero());
-    GridOp gridder(traj.mapping(osamp, kernel.radius()), &kernel, false, log);
+    GridKB3D gridder(traj, osamp, false, log);
     Cx3 rad = info.noncartesianVolume();
     CHECK(rad.dimension(0) == info.channels);
     CHECK(rad.dimension(1) == info.read_points);
@@ -82,10 +78,6 @@ TEST_CASE("Gridding", "GRIDDING")
     rad.setConstant(1.f);
     cart.setZero();
     gridder.Adj(rad, cart);
-    CHECK(cart(0, 2, 2, 2).real() == Approx(vals(1, 1, 1)));
-    CHECK(cart(1, 2, 2, 2).real() == Approx(vals(1, 1, 1)));
-    CHECK(cart(2, 2, 2, 2).real() == Approx(vals(1, 1, 1)));
-    CHECK(cart(3, 2, 2, 2).real() == Approx(vals(1, 1, 1)));
     gridder.A(cart, rad);
     CHECK(rad(0, 0, 0).real() == Approx(0.14457f).margin(1.e-5f));
     CHECK(rad(1, 0, 0).real() == Approx(0.14457f).margin(1.e-5f));
@@ -117,8 +109,7 @@ TEST_CASE("SingleSpoke", "GRIDDING")
 
   SECTION("NN")
   {
-    NearestNeighbour kernel;
-    GridOp gridder(traj.mapping(osamp, kernel.radius()), &kernel, false, log);
+    GridNN gridder(traj, osamp, false, log);
     Cx4 cart = gridder.newMultichannel(1);
     CHECK(cart.dimension(0) == 1);
     CHECK(cart.dimension(1) == 8);

@@ -7,53 +7,15 @@
 #include <cfenv>
 #include <cmath>
 
-GridNN::GridNN(Mapping map, bool const unsafe, Log &log)
-    : mapping_{std::move(map)}
-    , safe_{!unsafe}
-    , log_{log}
-    , DCexp_{1.f}
+GridNN::GridNN(
+    Trajectory const &traj,
+    float const os,
+    bool const unsafe,
+    Log &log,
+    float const inRes,
+    bool const shrink)
+    : GridOp(traj.mapping(os, 0, inRes, shrink), unsafe, log)
 {
-}
-
-Sz3 GridNN::gridDims() const
-{
-  return mapping_.cartDims;
-}
-
-Cx4 GridNN::newMultichannel(long const nc) const
-{
-  Cx4 g(nc, mapping_.cartDims[0], mapping_.cartDims[1], mapping_.cartDims[2]);
-  g.setZero();
-  return g;
-}
-
-void GridNN::setSDC(float const d)
-{
-  std::fill(mapping_.sdc.begin(), mapping_.sdc.end(), d);
-}
-
-void GridNN ::setSDC(R2 const &sdc)
-{
-  std::transform(
-      mapping_.noncart.begin(),
-      mapping_.noncart.end(),
-      mapping_.sdc.begin(),
-      [&sdc](NoncartesianIndex const &nc) { return sdc(nc.read, nc.spoke); });
-}
-
-void GridNN::setSDCExponent(float const dce)
-{
-  DCexp_ = dce;
-}
-
-void GridNN::setUnsafe()
-{
-  safe_ = true;
-}
-
-void GridNN::setSafe()
-{
-  safe_ = false;
 }
 
 void GridNN::Adj(Cx3 const &noncart, Cx4 &cart) const
@@ -136,4 +98,11 @@ void GridNN::A(Cx4 const &cart, Cx3 &noncart) const
   noncart.setZero();
   Threads::RangeFor(grid_task, mapping_.cart.size());
   log_.debug("Cart -> Non-cart: {}", log_.toNow(start));
+}
+
+R3 GridNN::apodization(Sz3 const sz) const
+{
+  R3 a(sz);
+  a.setConstant(1.f);
+  return a;
 }

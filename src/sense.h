@@ -12,7 +12,7 @@
 Cx4 DirectSENSE(
     Trajectory const &traj,
     float const os,
-    Kernel *kernel,
+    bool const kb,
     float const fov,
     Cx3 const &data,
     float const lambda,

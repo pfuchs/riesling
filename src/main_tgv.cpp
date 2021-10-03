@@ -39,19 +39,16 @@ int main_tgv(args::Subparser &parser)
   auto const &info = traj.info();
   Cx3 rad_ks = info.noncartesianVolume();
 
-  Kernel *kernel =
-      kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD))
-         : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1);
-  GridOp gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
+  auto gridder = make_grid(traj, osamp.Get(), kb, fastgrid, log);
   SDC::Load(sdc.Get(), traj, gridder, log);
-  gridder.setSDCExponent(sdc_exp.Get());
+  gridder->setSDCExponent(sdc_exp.Get());
 
-  Cx4 grid = gridder.newMultichannel(info.channels);
+  Cx4 grid = gridder->newMultichannel(info.channels);
   grid.setZero();
   FFT::ThreeDMulti fft(grid, log);
 
-  Cropper iter_cropper(info, gridder.gridDims(), iter_fov.Get(), log);
-  Apodizer apodizer(kernel, gridder.gridDims(), iter_cropper.size(), log);
+  Cropper iter_cropper(info, gridder->gridDims(), iter_fov.Get(), log);
+  R3 const apo = gridder->apodization(iter_cropper.size());
   long currentVolume = -1;
   Cx4 sense = iter_cropper.newMultichannel(info.channels);
   if (senseFile) {
@@ -59,25 +56,26 @@ int main_tgv(args::Subparser &parser)
   } else {
     currentVolume = LastOrVal(senseVolume, info.volumes);
     reader.readNoncartesian(currentVolume, rad_ks);
-    sense = DirectSENSE(traj, osamp.Get(), kernel, iter_fov.Get(), rad_ks, senseLambda.Get(), log);
+    sense = DirectSENSE(traj, osamp.Get(), kb, iter_fov.Get(), rad_ks, senseLambda.Get(), log);
   }
 
+  auto dev = Threads::GlobalDevice();
   EncodeFunction enc = [&](Cx3 &x, Cx3 &y) {
     auto const &start = log.now();
-    apodizer.deapodize(x);
+    x.device(dev) = x / apo.cast<Cx>();
     grid.setZero();
     iter_cropper.crop4(grid).device(Threads::GlobalDevice()) = Tile(x, info.channels) * sense;
     fft.forward(grid);
-    gridder.A(grid, y);
+    gridder->A(grid, y);
     log.debug("Encode: {}", log.toNow(start));
   };
 
   DecodeFunction dec = [&](Cx3 const &y, Cx3 &x) {
     auto const &start = log.now();
-    gridder.Adj(y, grid);
+    gridder->Adj(y, grid);
     fft.reverse(grid);
-    x.device(Threads::GlobalDevice()) = (iter_cropper.crop4(grid) * sense.conjugate()).sum(Sz1{0});
-    apodizer.deapodize(x);
+    x.device(dev) = (iter_cropper.crop4(grid) * sense.conjugate()).sum(Sz1{0});
+    x.device(dev) = x / apo.cast<Cx>();
     log.debug("Decode: {}", log.toNow(start));
   };
 

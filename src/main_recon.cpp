@@ -26,16 +26,13 @@ int main_recon(args::Subparser &parser)
   HD5::Reader reader(iname.Get(), log);
   auto const traj = reader.readTrajectory();
   auto const &info = traj.info();
-  Kernel *kernel =
-      kb ? (Kernel *)new KaiserBessel(kw.Get(), osamp.Get(), (info.type == Info::Type::ThreeD))
-         : (Kernel *)new NearestNeighbour(kw ? kw.Get() : 1);
-  GridOp gridder(traj.mapping(osamp.Get(), kernel->radius()), kernel, fastgrid, log);
+  auto gridder = make_grid(traj, osamp.Get(), kb, fastgrid, log);
   SDC::Load(sdc.Get(), traj, gridder, log);
-  gridder.setSDCExponent(sdc_exp.Get());
-  Cropper cropper(info, gridder.gridDims(), out_fov.Get(), log);
-  Apodizer apodizer(kernel, gridder.gridDims(), cropper.size(), log);
+  gridder->setSDCExponent(sdc_exp.Get());
+  Cropper cropper(info, gridder->gridDims(), out_fov.Get(), log);
+  R3 const apo = gridder->apodization(cropper.size());
   Cx3 rad_ks = info.noncartesianVolume();
-  Cx4 grid = gridder.newMultichannel(info.channels);
+  Cx4 grid = gridder->newMultichannel(info.channels);
   Cx3 image = cropper.newImage();
   Cx4 out = cropper.newSeries(info.volumes);
   out.setZero();
@@ -50,26 +47,26 @@ int main_recon(args::Subparser &parser)
     } else {
       currentVolume = LastOrVal(senseVolume, info.volumes);
       reader.readNoncartesian(currentVolume, rad_ks);
-      sense = DirectSENSE(traj, osamp.Get(), kernel, out_fov.Get(), rad_ks, senseLambda.Get(), log);
+      sense = DirectSENSE(traj, osamp.Get(), kb, out_fov.Get(), rad_ks, senseLambda.Get(), log);
     }
   }
 
+  auto dev = Threads::GlobalDevice();
   auto const &all_start = log.now();
   for (long iv = 0; iv < info.volumes; iv++) {
     auto const &vol_start = log.now();
     reader.readNoncartesian(iv, rad_ks);
     grid.setZero();
-    gridder.Adj(rad_ks, grid);
+    gridder->Adj(rad_ks, grid);
     log.info("FFT...");
     fft.reverse(grid);
     log.info("Channel combination...");
     if (rss) {
-      image.device(Threads::GlobalDevice()) =
-          ConjugateSum(cropper.crop4(grid), cropper.crop4(grid)).sqrt();
+      image.device(dev) = ConjugateSum(cropper.crop4(grid), cropper.crop4(grid)).sqrt();
     } else {
-      image.device(Threads::GlobalDevice()) = ConjugateSum(cropper.crop4(grid), sense);
+      image.device(dev) = ConjugateSum(cropper.crop4(grid), sense);
     }
-    apodizer.deapodize(image);
+    image.device(dev) = image / apo.cast<Cx>();
     if (tukey_s || tukey_e || tukey_h) {
       ImageTukey(tukey_s.Get(), tukey_e.Get(), tukey_h.Get(), image, log);
     }

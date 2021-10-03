@@ -40,19 +40,10 @@ TEST_CASE("Grid-NN")
     traj.mapping(os, kernel.radius());
   };
 
-  GridOp gridder(traj.mapping(os, kernel.radius()), &kernel, false, log);
-  GridNN gridnn(traj.mapping(os, kernel.radius()), false, log);
+  GridNN gridnn(traj, os, false, log);
   auto nc = info.noncartesianVolume();
-  auto c = gridder.newMultichannel(C);
+  auto c = gridnn.newMultichannel(C);
 
-  BENCHMARK("Noncartesian->Cartesian")
-  {
-    gridder.Adj(nc, c);
-  };
-  BENCHMARK("Cartesian->Noncartesian")
-  {
-    gridder.A(c, nc);
-  };
   BENCHMARK("NN Noncartesian->Cartesian")
   {
     gridnn.Adj(nc, c);
@@ -89,19 +80,10 @@ TEST_CASE("Grid-KB")
   float const os = 2.f;
   KaiserBessel kernel(3, os, true);
 
-  GridOp gridder(traj.mapping(os, kernel.radius()), &kernel, false, log);
-  GridKB3D gridkb(traj.mapping(os, kernel.radius()), false, log);
+  GridKB3D gridkb(traj, os, false, log);
   auto nc = info.noncartesianVolume();
-  auto c = gridder.newMultichannel(C);
+  auto c = gridkb.newMultichannel(C);
 
-  BENCHMARK("Noncartesian->Cartesian")
-  {
-    gridder.Adj(nc, c);
-  };
-  BENCHMARK("Cartesian->Noncartesian")
-  {
-    gridder.A(c, nc);
-  };
   BENCHMARK("KB Noncartesian->Cartesian")
   {
     gridkb.Adj(nc, c);

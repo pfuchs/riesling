@@ -35,18 +35,13 @@ int main_espirit(args::Subparser &parser)
   HD5::Reader reader(iname.Get(), log);
   auto const traj = reader.readTrajectory();
   auto const &info = traj.info();
-  Kernel *kernel =
-      kb ? (Kernel *)new KaiserBessel(3, osamp.Get(), (info.type == Info::Type::ThreeD))
-         : (Kernel *)new NearestNeighbour();
-
   Cx3 rad_ks = info.noncartesianVolume();
   reader.readNoncartesian(LastOrVal(volume, info.volumes), rad_ks);
-
   log.info(FMT_STRING("Cropping data to {} mm effective resolution"), res.Get());
-  GridOp gridder(traj.mapping(osamp.Get(), kernel->radius(), res.Get()), kernel, false, log);
+  auto gridder = make_grid(traj, osamp.Get(), kb, fastgrid, log, res);
   SDC::Load("pipe", traj, gridder, log);
   long const totalCalRad = kRad.Get() + calRad.Get() + (info.spokes_lo ? 0 : info.read_gap);
-  Cropper cropper(info, gridder.gridDims(), fov.Get(), log);
+  Cropper cropper(info, gridder->gridDims(), fov.Get(), log);
   Cx4 sense = cropper.crop4(
       ESPIRIT(gridder, rad_ks, kRad.Get(), totalCalRad, info.read_gap, thresh.Get(), log));
 

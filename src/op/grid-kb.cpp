@@ -1,5 +1,7 @@
 #include "grid-kb.h"
 
+#include "../cropper.h"
+#include "../fft_plan.h"
 #include "../tensorOps.h"
 #include "../threads.h"
 
@@ -8,68 +10,22 @@
 #include <cmath>
 
 template <int InPlane, int ThroughPlane>
-GridKB<InPlane, ThroughPlane>::GridKB(Mapping map, bool const unsafe, Log &log)
-    : mapping_{std::move(map)}
-    , safe_{!unsafe}
-    , log_{log}
-    , DCexp_{1.f}
+GridKB<InPlane, ThroughPlane>::GridKB(
+    Trajectory const &traj,
+    float const os,
+    bool const unsafe,
+    Log &log,
+    float const inRes,
+    bool const shrink)
+    : GridOp(traj.mapping(os, (InPlane / 2), inRes, shrink), unsafe, log)
     , betaIn_{(float)M_PI * sqrtf(pow(InPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
-    , betaThrough_{
-          (float)M_PI *
-          sqrtf(pow(ThroughPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
+    , betaThrough_{(float)M_PI * sqrtf(pow(ThroughPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
+    , fft_{Sz3{InPlane, InPlane, ThroughPlane}, Log(), 1}
 {
 
   // Array of indices used when building the kernel
   std::iota(indIn_.data(), indIn_.data() + InPlane, -InPlane / 2);
   std::iota(indThrough_.data(), indThrough_.data() + ThroughPlane, -ThroughPlane / 2);
-}
-
-template <int InPlane, int ThroughPlane>
-Sz3 GridKB<InPlane, ThroughPlane>::gridDims() const
-{
-  return mapping_.cartDims;
-}
-
-template <int InPlane, int ThroughPlane>
-Cx4 GridKB<InPlane, ThroughPlane>::newMultichannel(long const nc) const
-{
-  Cx4 g(nc, mapping_.cartDims[0], mapping_.cartDims[1], mapping_.cartDims[2]);
-  g.setZero();
-  return g;
-}
-
-template <int InPlane, int ThroughPlane>
-void GridKB<InPlane, ThroughPlane>::setSDC(float const d)
-{
-  std::fill(mapping_.sdc.begin(), mapping_.sdc.end(), d);
-}
-
-template <int InPlane, int ThroughPlane>
-void GridKB<InPlane, ThroughPlane>::setSDC(R2 const &sdc)
-{
-  std::transform(
-      mapping_.noncart.begin(),
-      mapping_.noncart.end(),
-      mapping_.sdc.begin(),
-      [&sdc](NoncartesianIndex const &nc) { return sdc(nc.read, nc.spoke); });
-}
-
-template <int InPlane, int ThroughPlane>
-void GridKB<InPlane, ThroughPlane>::setSDCExponent(float const dce)
-{
-  DCexp_ = dce;
-}
-
-template <int InPlane, int ThroughPlane>
-void GridKB<InPlane, ThroughPlane>::setUnsafe()
-{
-  safe_ = true;
-}
-
-template <int InPlane, int ThroughPlane>
-void GridKB<InPlane, ThroughPlane>::setSafe()
-{
-  safe_ = false;
 }
 
 template <int W, typename T>
@@ -96,14 +52,15 @@ void GridKB<InPlane, ThroughPlane>::kernel(Point3 const r, float const dc, Kerne
     k = Outer(kx, ky);
   }
 
-  //   if (fft_) {
-  //     Cx3 temp(sz_);
-  //     temp = k.cast<Cx>();
-  //     fft_->reverse(temp);
-  //     temp.sqrt();
-  //     fft_->forward(temp);
-  //     k = temp.real();
-  //   }
+  if (sqrt_) {
+    // This is the worst possible way to do this but I cannot figure out what IFFT(SQRT(FFT(KB))) is
+    Cx3 temp(InPlane, InPlane, ThroughPlane);
+    temp = k.template cast<Cx>();
+    fft_.reverse(temp);
+    temp.sqrt();
+    fft_.forward(temp);
+    k = temp.real();
+  }
   k = k * dc / Sum(k);
 }
 
@@ -197,7 +154,6 @@ void GridKB<InPlane, ThroughPlane>::A(Cx4 const &cart, Cx3 &noncart) const
 
   long const nchan = cart.dimension(0);
   using FixZero = Eigen::type2index<0>;
-  using FixOne = Eigen::type2index<1>;
   using FixIn = Eigen::type2index<InPlane>;
   using FixThrough = Eigen::type2index<ThroughPlane>;
   Eigen::IndexList<int, FixIn, FixIn, FixThrough> szC;
@@ -227,6 +183,27 @@ void GridKB<InPlane, ThroughPlane>::A(Cx4 const &cart, Cx3 &noncart) const
   noncart.setZero();
   Threads::RangeFor(grid_task, mapping_.cart.size());
   log_.debug("Cart -> Non-cart: {}", log_.toNow(start));
+}
+
+template <int InPlane, int ThroughPlane>
+R3 GridKB<InPlane, ThroughPlane>::apodization(Sz3 const sz) const
+{
+  // There is an analytic expression for this but I haven't got it right to date
+  auto gridSz = this->gridDims();
+  Cx3 temp(gridSz);
+  FFT::ThreeD fft(temp, log_);
+  temp.setZero();
+  Kernel k;
+  kernel(Point3{0, 0, 0}, 1.f, k);
+  Crop3(temp, k.dimensions()) = k.template cast<Cx>();
+  fft.reverse(temp);
+  R3 a = Crop3(R3(temp.real()), sz);
+  float const scale =
+      sqrt(std::accumulate(gridSz.cbegin(), gridSz.cend(), 1, std::multiplies<long>()));
+  log_.info(
+      FMT_STRING("Apodization size {} scale factor: {}"), fmt::join(a.dimensions(), ","), scale);
+  a.device(Threads::GlobalDevice()) = a * a.constant(scale);
+  return a;
 }
 
 template struct GridKB<3, 3>;

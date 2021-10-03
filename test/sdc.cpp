@@ -1,7 +1,6 @@
 #include "../src/sdc.h"
-#include "../src/kernels.h"
 #include "../src/log.h"
-#include "../src/op/grid.h"
+#include "../src/op/grid-nn.h"
 #include "../src/trajectory.h"
 #include <catch2/catch.hpp>
 
@@ -28,12 +27,11 @@ TEST_CASE("SDC-Pipe", "[SDC]")
 
   SECTION("NN")
   {
-    NearestNeighbour kernel;
-    GridOp gridder(traj.mapping(osamp, kernel.radius()), &kernel, false, log);
+    std::unique_ptr<GridOp> gridder = std::make_unique<GridNN>(traj, osamp, false, log);
     R2 sdc = SDC::Pipe(traj, gridder, log);
     CHECK(sdc.dimension(0) == info.read_points);
     CHECK(sdc.dimension(1) == info.spokes_total());
-    Cx4 cart = gridder.newMultichannel(info.channels);
+    Cx4 cart = gridder->newMultichannel(info.channels);
     CHECK(sdc(0, 0) == Approx(1.f));
     CHECK(sdc(1, 0) == Approx(1.f));
     CHECK(sdc(2, 0) == Approx(1.f));
