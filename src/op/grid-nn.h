@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../kernel.h"
 #include "../trajectory.h"
 #include "grid.h"
 

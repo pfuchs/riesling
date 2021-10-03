@@ -1,10 +1,9 @@
-#include "apodizer.h"
+
 #include "coils.h"
 #include "cropper.h"
 #include "fft_plan.h"
 #include "io_hd5.h"
 #include "io_nifti.h"
-#include "kernels.h"
 #include "log.h"
 #include "op/grid.h"
 #include "parse_args.h"
@@ -59,9 +58,6 @@ int main_phantom(args::Subparser &parser)
 
   Log log = ParseCommand(parser, iname);
   FFT::Start(log);
-
-  Kernel *kernel =
-      kb ? (Kernel *)new KaiserBessel(3, grid_samp.Get(), true) : (Kernel *)new NearestNeighbour();
 
   R3 points;
   Info info;
@@ -118,8 +114,6 @@ int main_phantom(args::Subparser &parser)
   FFT::ThreeDMulti fft(grid, log); // FFTW needs temp space for planning
 
   Cropper cropper(hi_gridder->gridDims(), info.matrix, log);
-  Apodizer apodizer(kernel, hi_gridder->gridDims(), cropper.size(), log);
-
   Cx3 phan =
       shepplogan
           ? SheppLoganPhantom(
@@ -132,8 +126,8 @@ int main_phantom(args::Subparser &parser)
                 log)
           : SphericalPhantom(
                 info.matrix, info.voxel_size, phan_c.Get(), phan_r.Get(), intensity.Get(), log);
-
-  apodizer.deapodize(phan); // Don't ask me why this isn't apodize, but it works
+  R3 const apo = hi_gridder->apodization(phan.dimensions());
+  phan = phan / apo.cast<Cx>();
 
   log.info("Generating Cartesian k-space...");
   grid.setZero();

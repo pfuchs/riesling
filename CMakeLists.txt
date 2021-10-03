@@ -19,7 +19,6 @@ add_definitions(-DEIGEN_USE_THREADS)
 
 # Common library between tests and main executable
 add_library(vineyard
-    src/apodizer.cpp
     src/cg.cpp
     src/coils.cpp
     src/compressor.cpp
@@ -33,9 +32,6 @@ add_library(vineyard
     src/hankel.cpp
     src/io_hd5.cpp
     src/io_nifti.cpp
-    src/kernel.cpp
-    src/kernel_kb.cpp
-    src/kernel_nn.cpp
     src/log.cpp
     src/padder.cpp
     src/phantom_sphere.cpp
@@ -112,7 +108,6 @@ if( ${BUILD_TESTS} )
         test/fft3.cpp
         test/gridder.cpp
         test/hankel.cpp
-        test/kernel_kb.cpp
         test/sdc.cpp
         test/zinfandel.cpp
         test/op/crop.cpp

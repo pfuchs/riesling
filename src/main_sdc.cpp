@@ -1,7 +1,6 @@
 #include "types.h"
 
 #include "io_hd5.h"
-#include "kernels.h"
 #include "log.h"
 #include "op/grid.h"
 #include "parse_args.h"

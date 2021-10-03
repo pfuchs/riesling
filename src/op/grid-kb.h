@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../fft_plan.h"
-#include "../kernel.h"
 #include "../trajectory.h"
 #include "grid.h"
 

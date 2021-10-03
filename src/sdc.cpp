@@ -1,7 +1,6 @@
 #include "sdc.h"
 
 #include "io_hd5.h"
-#include "kernel.h"
 #include "op/grid.h"
 #include "tensorOps.h"
 #include "threads.h"

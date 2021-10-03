@@ -1,13 +1,11 @@
 #include "types.h"
 
-#include "apodizer.h"
 #include "cropper.h"
 #include "espirit.h"
 #include "fft_plan.h"
 #include "filter.h"
 #include "io_hd5.h"
 #include "io_nifti.h"
-#include "kernels.h"
 #include "log.h"
 #include "op/grid.h"
 #include "parse_args.h"

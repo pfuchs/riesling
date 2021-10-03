@@ -2,7 +2,6 @@
 
 #include "../src/op/grid.h"
 #include "../src/info.h"
-#include "../src/kernels.h"
 #include "../src/op/grid-kb.h"
 #include "../src/op/grid-nn.h"
 #include "../src/traj_archimedean.h"
@@ -33,11 +32,10 @@ TEST_CASE("Grid-NN")
   Trajectory traj(info, points, log);
 
   float const os = 2.f;
-  NearestNeighbour kernel(1);
 
   BENCHMARK("Mapping")
   {
-    traj.mapping(os, kernel.radius());
+    traj.mapping(os, 1);
   };
 
   GridNN gridnn(traj, os, false, log);
@@ -78,7 +76,6 @@ TEST_CASE("Grid-KB")
   Trajectory traj(info, points, log);
 
   float const os = 2.f;
-  KaiserBessel kernel(3, os, true);
 
   GridKB3D gridkb(traj, os, false, log);
   auto nc = info.noncartesianVolume();
