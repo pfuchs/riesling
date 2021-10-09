@@ -1,27 +1,35 @@
-#include "cg.h"
+#pragma once
 
+#include "log.h"
 #include "tensorOps.h"
 #include "threads.h"
+#include "types.h"
 
-void cg(CgSystem const &sys, long const &max_its, float const &thresh, Cx3 &img, Log &log)
+/* Conjugate gradients as described in K. P. Pruessmann, M. Weiger, M. B. Scheidegger, and P.
+ * Boesiger, ‘SENSE: Sensitivity encoding for fast MRI’, Magnetic Resonance in Medicine, vol. 42,
+ * no. 5, pp. 952–962, 1999.
+ */
+template <typename Op>
+void cg(long const &max_its, float const &thresh, Op const &op, typename Op::Input &x, Log &log)
 {
   log.info(FMT_STRING("Starting Conjugate Gradients, threshold {}"), thresh);
 
   // Allocate all memory
-  auto const dims = img.dimensions();
-  Cx3 b(dims);
-  Cx3 q(dims);
-  Cx3 p(dims);
-  Cx3 r(dims);
+  using T = typename Op::Input;
+  auto const dims = x.dimensions();
+  T b(dims);
+  T q(dims);
+  T p(dims);
+  T r(dims);
   b.setZero();
   q.setZero();
-  p = img;
-  r = img;
+  p = x;
+  r = x;
   float r_old = Norm2(r);
-  float const a2 = Norm2(img);
+  float const a2 = Norm2(x);
 
   for (long icg = 0; icg < max_its; icg++) {
-    sys(p, q);
+    op.AdjA(p, q);
     float const alpha = r_old / std::real(Dot(p, q));
     b.device(Threads::GlobalDevice()) = b + p * p.constant(alpha);
     r.device(Threads::GlobalDevice()) = r - q * q.constant(alpha);
@@ -37,37 +45,40 @@ void cg(CgSystem const &sys, long const &max_its, float const &thresh, Cx3 &img,
     }
     r_old = r_new;
   }
-  img = b;
+  x = b;
 }
 
+template <typename Op>
 void cgvar(
-    CgVarSystem const &sys,
     long const &max_its,
     float const &thresh,
     float const &pre0,
     float const &pre1,
-    Cx3 &img,
+    Op &op,
+    typename Op::Input &x,
     Log &log)
 {
   log.info(FMT_STRING("Starting Variably Preconditioned Conjugate Gradients"));
 
   // Allocate all memory
-  auto const dims = img.dimensions();
-  Cx3 b(dims);
-  Cx3 q(dims);
-  Cx3 p(dims);
-  Cx3 r(dims);
-  Cx3 r1(dims);
+  using T = typename Op::Input;
+  auto const dims = x.dimensions();
+  T b(dims);
+  T q(dims);
+  T p(dims);
+  T r(dims);
+  T r1(dims);
   b.setZero();
   q.setZero();
-  p = img;
-  r = img;
-  float const a2 = Norm2(img);
+  p = x;
+  r = x;
+  float const a2 = Norm2(x);
 
   for (long icg = 0; icg < max_its; icg++) {
     float const prog = static_cast<float>(icg) / ((max_its == 1) ? 1. : (max_its - 1.f));
     float const pre = std::exp(std::log(pre1) * prog + std::log(pre0) * (1.f - prog));
-    sys(p, q, pre);
+    op.setPreconditioning(pre);
+    op.AdjA(p, q);
     r1 = r;
     float const r_old = Norm2(r1);
     float const alpha = r_old / std::real(Dot(p, q));
@@ -85,5 +96,5 @@ void cgvar(
       break;
     }
   }
-  img = b;
+  x = b;
 }

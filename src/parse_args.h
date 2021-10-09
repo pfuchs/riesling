@@ -54,12 +54,6 @@ long LastOrVal(args::ValueFlag<long> &sFlag, long const vols);
   CORE_RECON_ARGS                                                                                  \
   args::ValueFlag<float> out_fov(                                                                  \
       parser, "OUT FOV", "Final FoV in mm (default header value)", {"fov"}, -1);                   \
-  args::ValueFlag<std::string> senseFile(                                                          \
-      parser, "SENSE", "Read SENSE maps from specified .h5 file", {"sense", 's'});                 \
-  args::ValueFlag<long> senseVolume(                                                               \
-      parser, "SENSE VOLUME", "Take SENSE maps from this volume", {"senseVolume"}, 0);             \
-  args::ValueFlag<float> senseLambda(                                                              \
-      parser, "LAMBDA", "SENSE regularization", {"lambda", 'l'}, 0.f);                             \
   args::ValueFlag<float> tukey_s(                                                                  \
       parser, "TUKEY START", "Start-width of Tukey filter", {"tukey_start"}, 1.0f);                \
   args::ValueFlag<float> tukey_e(                                                                  \

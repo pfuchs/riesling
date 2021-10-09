@@ -49,12 +49,10 @@ Cx4 DirectSENSE(
   return channels;
 }
 
-Cx4 LoadSENSE(std::string const &calFile, Sz4 const dims, Log &log)
+Cx4 LoadSENSE(std::string const &calFile, Log &log)
 {
-  Cx4 sense(dims);
   HD5::Reader senseReader(calFile, log);
-  senseReader.readSENSE(sense);
-  return sense;
+  return senseReader.readSENSE();
 }
 
 Cx4 InterpSENSE(std::string const &file, Eigen::Array3l const dims, Log &log)

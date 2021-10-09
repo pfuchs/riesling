@@ -14,7 +14,7 @@
 int main_recon(args::Subparser &parser)
 {
   COMMON_RECON_ARGS;
-
+  COMMON_SENSE_ARGS;
   args::Flag rss(parser, "RSS", "Use Root-Sum-Squares channel combination", {"rss", 'r'});
   args::Flag save_channels(
       parser, "CHANNELS", "Write out individual channels from first volume", {"channels", 'c'});
@@ -41,7 +41,7 @@ int main_recon(args::Subparser &parser)
   Cx4 sense = rss ? Cx4() : cropper.newMultichannel(info.channels);
   if (!rss) {
     if (senseFile) {
-      sense = LoadSENSE(senseFile.Get(), cropper.dims(info.channels), log);
+      sense = LoadSENSE(senseFile.Get(), log);
     } else {
       currentVolume = LastOrVal(senseVolume, info.volumes);
       reader.readNoncartesian(currentVolume, rad_ks);

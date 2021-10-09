@@ -18,6 +18,16 @@ SenseOp::SenseOp(Output &maps, Output::Dimensions const &bigSize)
       });
 }
 
+long SenseOp::channels() const
+{
+  return maps_.dimension(0);
+}
+
+Sz3 SenseOp::dimensions() const
+{
+  return Sz3{maps_.dimension(1), maps_.dimension(2), maps_.dimension(3)};
+}
+
 void SenseOp::A(Input const &x, Output &y) const
 {
   assert(x.dimension(0) == maps_.dimension(1));

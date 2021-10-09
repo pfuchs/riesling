@@ -5,8 +5,8 @@ include(BuildType)
 include(GitVersion)
 
 # Deal with GCC 8 and std::filesystem
-# Thanks to Deniz Bahadir on the CMake Discourse
 add_link_options( "$<$<CXX_COMPILER_ID:GNU>:LINKER:--as-needed>" )
+# Thanks to Deniz Bahadir on the CMake Discourse
 link_libraries( "$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:-lstdc++fs>" )
 
 find_package(Threads REQUIRED)
@@ -24,7 +24,6 @@ add_definitions(-DEIGEN_USE_THREADS)
 
 # Common library between tests and main executable
 add_library(vineyard
-    src/cg.cpp
     src/coils.cpp
     src/compressor.cpp
     src/cropper.cpp
@@ -57,6 +56,7 @@ add_library(vineyard
     src/op/grid.cpp
     src/op/grid-nn.cpp
     src/op/grid-kb.cpp
+    src/op/recon.cpp
     src/op/sense.cpp
 )
 target_link_libraries(vineyard PUBLIC
