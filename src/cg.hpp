@@ -13,31 +13,30 @@ template <typename Op>
 void cg(long const &max_its, float const &thresh, Op const &op, typename Op::Input &x, Log &log)
 {
   log.info(FMT_STRING("Starting Conjugate Gradients, threshold {}"), thresh);
-
+  auto dev = Threads::GlobalDevice();
+  float const norm_x0 = Norm2(x);
   // Allocate all memory
   using T = typename Op::Input;
   auto const dims = x.dimensions();
-  T b(dims);
   T q(dims);
   T p(dims);
   T r(dims);
-  b.setZero();
   q.setZero();
-  p = x;
-  r = x;
+  op.AdjA(x, r);
+  r.device(dev) = x - r;
+  p.device(dev) = r;
   float r_old = Norm2(r);
-  float const a2 = Norm2(x);
 
   for (long icg = 0; icg < max_its; icg++) {
     op.AdjA(p, q);
     float const alpha = r_old / std::real(Dot(p, q));
-    b.device(Threads::GlobalDevice()) = b + p * p.constant(alpha);
-    r.device(Threads::GlobalDevice()) = r - q * q.constant(alpha);
+    x.device(dev) = x + p * p.constant(alpha);
+    r.device(dev) = r - q * q.constant(alpha);
     float const r_new = Norm2(r);
     float const beta = r_new / r_old;
-    p.device(Threads::GlobalDevice()) = r + p * p.constant(beta);
-    float const delta = r_new / a2;
-    log.image(b, fmt::format(FMT_STRING("cg-b-{:02}.nii"), icg));
+    p.device(dev) = r + p * p.constant(beta);
+    float const delta = r_new / norm_x0;
+    log.image(x, fmt::format(FMT_STRING("cg-b-{:02}.nii"), icg));
     log.info(FMT_STRING("CG {}: ɑ {} β {} δ {}"), icg, alpha, beta, delta);
     if (delta < thresh) {
       log.info(FMT_STRING("Reached convergence threshold"));
@@ -45,7 +44,6 @@ void cg(long const &max_its, float const &thresh, Op const &op, typename Op::Inp
     }
     r_old = r_new;
   }
-  x = b;
 }
 
 template <typename Op>
@@ -59,7 +57,7 @@ void cgvar(
     Log &log)
 {
   log.info(FMT_STRING("Starting Variably Preconditioned Conjugate Gradients"));
-
+  auto dev = Threads::GlobalDevice();
   // Allocate all memory
   using T = typename Op::Input;
   auto const dims = x.dimensions();
@@ -82,12 +80,12 @@ void cgvar(
     r1 = r;
     float const r_old = Norm2(r1);
     float const alpha = r_old / std::real(Dot(p, q));
-    b.device(Threads::GlobalDevice()) = b + p * p.constant(alpha);
+    b.device(dev) = b + p * p.constant(alpha);
 
-    r.device(Threads::GlobalDevice()) = r - q * q.constant(alpha);
+    r.device(dev) = r - q * q.constant(alpha);
     float const r_new = std::real(Dot(r, r - r1));
     float const beta = r_new / r_old;
-    p.device(Threads::GlobalDevice()) = r + p * p.constant(beta);
+    p.device(dev) = r + p * p.constant(beta);
     float const delta = r_new / a2;
     log.image(b, fmt::format(FMT_STRING("cg-b-{:02}.nii"), icg));
     log.info(FMT_STRING("CG {}: ɑ {} β {} δ {} pre {}"), icg, alpha, beta, delta, pre);

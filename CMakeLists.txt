@@ -43,6 +43,8 @@ add_library(vineyard
     src/parse_args.cpp
     src/sdc.cpp
     src/sense.cpp
+    src/sim-prep.cpp
+    src/sim-eddy.cpp
     src/slab_correct.cpp
     src/tgv.cpp
     src/threads.cpp
@@ -56,6 +58,9 @@ add_library(vineyard
     src/op/grid.cpp
     src/op/grid-nn.cpp
     src/op/grid-kb.cpp
+    src/op/grid-basis.cpp
+    src/op/grid-basis-nn.cpp
+    src/op/grid-basis-kb.cpp
     src/op/recon.cpp
     src/op/sense.cpp
 )
@@ -71,6 +76,9 @@ target_link_libraries(vineyard PUBLIC
 
 # Main executable
 add_executable(riesling
+    src/main_basis_admm.cpp
+    src/main_basis_recon.cpp
+    src/main_basis_sim.cpp
     src/main_cg.cpp
     src/main_cgvar.cpp
     src/main_compress.cpp

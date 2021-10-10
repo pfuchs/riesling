@@ -26,6 +26,7 @@ using R1 = Eigen::Tensor<float, 1>;                       // 1D Real data
 using R2 = Eigen::Tensor<float, 2>;                       // 2D Real data
 using R3 = Eigen::Tensor<float, 3>;                       // 3D Real data
 using R4 = Eigen::Tensor<float, 4>;                       // 4D Real data
+using R5 = Eigen::Tensor<float, 5>;                       // 4D Real data
 
 using Rd1 = Eigen::Tensor<double, 1>;
 

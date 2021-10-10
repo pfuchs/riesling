@@ -46,6 +46,7 @@ int main_cgvar(args::Subparser &parser)
 
   ReconOp recon(traj, osamp.Get(), kb, fastgrid, sdc.Get(), senseMaps, log);
   recon.setPreconditioning(sdc_exp.Get());
+  recon.calcToeplitz(traj.info());
   Cx3 vol(recon.dimensions());
   Cropper out_cropper(info, vol.dimensions(), out_fov.Get(), log);
   Cx3 cropped = out_cropper.newImage();

@@ -2,9 +2,13 @@
 
 #include "operator.h"
 
-struct SenseOp final : Operator<3, 4>
+template <int R>
+struct SenseOpR final : Operator<R, R + 1>
 {
-  SenseOp(Output &maps, typename Output::Dimensions const &fullSize);
+  using Input = typename Operator<R, R + 1>::Input;
+  using Output = typename Operator<R, R + 1>::Output;
+
+  SenseOpR(Cx4 &maps, typename Output::Dimensions const &fullSize);
 
   void A(Input const &x, Output &y) const;
   void Adj(Output const &x, Input &y) const;
@@ -15,5 +19,8 @@ struct SenseOp final : Operator<3, 4>
 
 private:
   Output maps_;
-  Output::Dimensions full_, left_, size_, right_;
+  typename Output::Dimensions left_, right_;
 };
+
+using SenseOp = SenseOpR<3>;
+using SenseBasis = SenseOpR<4>;

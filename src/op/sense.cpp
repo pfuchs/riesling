@@ -2,48 +2,60 @@
 #include "../threads.h"
 #include "sense.h"
 
-SenseOp::SenseOp(Output &maps, Output::Dimensions const &bigSize)
+template <int R>
+SenseOpR<R>::SenseOpR(Output &maps, Output::Dimensions const &bigSize)
     : maps_{std::move(maps)}
 {
-  auto const smallSize = maps_.dimensions();
-  std::copy_n(bigSize.begin(), 4, full_.begin());
-  std::copy_n(smallSize.begin(), 4, size_.begin());
+  auto const mapSz = maps_.dimensions();
+  std::fill_n(left_.begin(), R - 3, 0L);
+  std::fill_n(right_.begin(), R - 3, 0L);
   std::transform(
-      bigSize.begin(), bigSize.end(), smallSize.begin(), left_.begin(), [](long big, long small) {
+      bigSize.end() - 3, bigSize.end(), mapSz.end() - 3, left_.end() - 3, [](long big, long small) {
         return (big - small + 1) / 2;
       });
   std::transform(
-      bigSize.begin(), bigSize.end(), smallSize.begin(), right_.begin(), [](long big, long small) {
+      bigSize.begin(), bigSize.end(), mapSz.end() - 3, right_.end() - 3, [](long big, long small) {
         return (big - small) / 2;
       });
 }
 
-long SenseOp::channels() const
+template <int R>
+long SenseOpR<R>::channels() const
 {
   return maps_.dimension(0);
 }
 
-Sz3 SenseOp::dimensions() const
+template <int R>
+Sz3 SenseOpR<R>::dimensions() const
 {
   return Sz3{maps_.dimension(1), maps_.dimension(2), maps_.dimension(3)};
 }
 
-void SenseOp::A(Input const &x, Output &y) const
+template <int R>
+void SenseOpR<R>::A(Input const &x, Output &y) const
 {
-  assert(x.dimension(0) == maps_.dimension(1));
-  assert(x.dimension(1) == maps_.dimension(2));
-  assert(x.dimension(2) == maps_.dimension(3));
   assert(y.dimension(0) == maps_.dimension(0));
-  assert(y.dimension(1) == (maps_.dimension(1) + left_[1] + right_[1]));
-  assert(y.dimension(2) == (maps_.dimension(2) + left_[2] + right_[2]));
-  assert(y.dimension(3) == (maps_.dimension(3) + left_[3] + right_[3]));
+  for (auto ii = 0; ii < R - 3; ii++) {
+    assert(x.dimension(ii) == y.dimension(ii + 1));
+  }
+  for (auto ii = 0; ii < 3; ii++) {
+    assert(x.dimension(R - 3 + ii) == maps_.dimension(1 + ii));
+    assert(
+        y.dimension(R - 3 + ii) ==
+        (maps_.dimension(1 + ii) + left_[R - 3 + ii] + right_[R - 3 + ii]));
+  }
 
-  Eigen::IndexList<Eigen::type2index<1>, int, int, int> res;
-  res.set(1, x.dimension(0));
-  res.set(2, x.dimension(1));
-  res.set(3, x.dimension(2));
-  Eigen::IndexList<int, Eigen::type2index<1>, Eigen::type2index<1>, Eigen::type2index<1>> brd;
-  brd.set(0, maps_.dimension(0));
+  Output::Dimensions res, brd;
+  for (auto ii = 0; ii < R - 3; ii++) {
+    res[ii] = 1;
+  }
+  for (auto ii = 0; ii < 3; ii++) {
+    res[ii + R - 3] = x.dimension(ii);
+  }
+  brd[0] = maps_.dimension(0);
+  for (auto ii = 1; ii < R; ii++) {
+    brd[ii] = 1;
+  }
 
   Eigen::array<std::pair<int, int>, 4> paddings;
   std::transform(
@@ -54,19 +66,27 @@ void SenseOp::A(Input const &x, Output &y) const
   y.device(Threads::GlobalDevice()) = (x.reshape(res).broadcast(brd) * maps_).pad(paddings);
 }
 
-void SenseOp::Adj(Output const &x, Input &y) const
+template <int R>
+void SenseOpR<R>::Adj(Output const &x, Input &y) const
 {
   assert(x.dimension(0) == maps_.dimension(0));
-  assert(x.dimension(1) == (maps_.dimension(1) + left_[1] + right_[1]));
-  assert(x.dimension(2) == (maps_.dimension(2) + left_[2] + right_[2]));
-  assert(x.dimension(3) == (maps_.dimension(3) + left_[3] + right_[3]));
-  assert(y.dimension(0) == maps_.dimension(1));
-  assert(y.dimension(1) == maps_.dimension(2));
-  assert(y.dimension(2) == maps_.dimension(3));
+  for (auto ii = 0; ii < R - 3; ii++) {
+    assert(y.dimension(ii) == x.dimension(ii + 1));
+  }
+  for (auto ii = 0; ii < 3; ii++) {
+    assert(y.dimension(R - 3 + ii) == maps_.dimension(1 + ii));
+    assert(
+        x.dimension(R - 3 + ii) ==
+        (maps_.dimension(1 + ii) + left_[R - 3 + ii] + right_[R - 3 + ii]));
+  }
   y.device(Threads::GlobalDevice()) = ConjugateSum(x.slice(left_, size_), maps_);
 }
 
-void SenseOp::AdjA(Input const &x, Input &y) const
+template <int R>
+void SenseOpR<R>::AdjA(Input const &x, Input &y) const
 {
   y.device(Threads::GlobalDevice()) = x;
 }
+
+template struct SenseOpR<3>;
+template struct SenseOpR<4>;

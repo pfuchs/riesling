@@ -11,6 +11,7 @@ extern args::HelpFlag help;
 extern args::Flag verbose;
 
 Log ParseCommand(args::Subparser &parser, args::Positional<std::string> &iname);
+Log ParseCommand(args::Subparser &parser);
 
 struct Vector3fReader
 {
@@ -25,6 +26,18 @@ std::string OutName(
 
 extern void WriteOutput(
     Cx4 const &vols,
+    bool const mag,
+    bool const needsSwap,
+    Info const &info,
+    std::string const &iname,
+    std::string const &oname,
+    std::string const &suffix,
+    std::string const &ext,
+    Log &log);
+
+void WriteBasisVolumes(
+    Cx5 const &basisVols,
+    R2 const &basis,
     bool const mag,
     bool const needsSwap,
     Info const &info,
