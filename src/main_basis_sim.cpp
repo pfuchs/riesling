@@ -6,7 +6,7 @@
 #include "sim-eddy.h"
 #include "sim-prep.h"
 
-int main_basis(args::Subparser &parser)
+int main_basis_sim(args::Subparser &parser)
 {
   args::Positional<std::string> oname(parser, "OUTPUT", "Name for the basis file");
 

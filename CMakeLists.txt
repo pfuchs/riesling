@@ -36,6 +36,7 @@ add_library(vineyard
     src/hankel.cpp
     src/io_hd5.cpp
     src/io_nifti.cpp
+    src/llr.cpp
     src/log.cpp
     src/padder.cpp
     src/phantom_sphere.cpp
@@ -62,6 +63,7 @@ add_library(vineyard
     src/op/grid-basis-nn.cpp
     src/op/grid-basis-kb.cpp
     src/op/recon.cpp
+    src/op/recon-basis.cpp
     src/op/sense.cpp
 )
 target_link_libraries(vineyard PUBLIC

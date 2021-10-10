@@ -1,4 +1,4 @@
-#include "grid-kb.h"
+#include "grid-basis-kb.h"
 
 #include "../cropper.h"
 #include "../fft_plan.h"
@@ -68,7 +68,7 @@ void GridBasisKB<InPlane, ThroughPlane>::kernel(Point3 const r, float const dc, 
 }
 
 template <int InPlane, int ThroughPlane>
-void GridBasisKB<InPlane, ThroughPlane>::Adj(Input const &noncart, Output &cart) const
+void GridBasisKB<InPlane, ThroughPlane>::Adj(Output const &noncart, Input &cart) const
 {
   assert(cart.dimension(0) == noncart.dimension(0));
   assert(cart.dimension(1) == basis_.dimension(1));
@@ -132,16 +132,20 @@ void GridBasisKB<InPlane, ThroughPlane>::Adj(Input const &noncart, Output &cart)
       stC.set(3, c.y - (InPlane / 2));
       if (safe_) {
         stC.set(4, c.z - (ThroughPlane / 2) - minZ[ti]);
-        workspace[ti].slice(stC, szC) +=
-            nck.reshape(rshNC).broadcast(brdNC) *
-            k.template cast<Cx>().reshape(rshK).broadcast(brdK) *
-            basis_.chip(nc.spoke % basis_.dimension(0)).cast<Cx>().reshape(rshB).broadcast(brdB);
+        workspace[ti].slice(stC, szC) += nck.reshape(rshNC).broadcast(brdNC) *
+                                         k.template cast<Cx>().reshape(rshK).broadcast(brdK) *
+                                         basis_.chip(nc.spoke % basis_.dimension(0), 0)
+                                             .template cast<Cx>()
+                                             .reshape(rshB)
+                                             .broadcast(brdB);
       } else {
         stC.set(4, c.z - (ThroughPlane / 2));
-        cart.slice(stC, szC) +=
-            nck.reshape(rshNC).broadcast(brdNC) *
-            k.template cast<Cx>().reshape(rshK).broadcast(brdK) *
-            basis_.chip(nc.spoke % basis_.dimension(0)).cast<Cx>().reshape(rshB).broadcast(brdB);
+        cart.slice(stC, szC) += nck.reshape(rshNC).broadcast(brdNC) *
+                                k.template cast<Cx>().reshape(rshK).broadcast(brdK) *
+                                basis_.chip(nc.spoke % basis_.dimension(0), 0)
+                                    .template cast<Cx>()
+                                    .reshape(rshB)
+                                    .broadcast(brdB);
       }
     }
   };
@@ -164,7 +168,7 @@ void GridBasisKB<InPlane, ThroughPlane>::Adj(Input const &noncart, Output &cart)
 }
 
 template <int InPlane, int ThroughPlane>
-void GridBasisKB<InPlane, ThroughPlane>::A(Cx4 const &cart, Cx3 &noncart) const
+void GridBasisKB<InPlane, ThroughPlane>::A(Input const &cart, Output &noncart) const
 {
   assert(cart.dimension(0) == noncart.dimension(0));
   assert(cart.dimension(1) == basis_.dimension(1));
@@ -196,7 +200,7 @@ void GridBasisKB<InPlane, ThroughPlane>::A(Cx4 const &cart, Cx3 &noncart) const
       noncart.chip(nc.spoke, 2).chip(nc.read, 1) =
           cart.slice(stC, szC)
               .contract(
-                  basis_.chip(nc.spoke % basis_.dimension(0), 0),
+                  basis_.chip(nc.spoke % basis_.dimension(0), 0).template cast<Cx>(),
                   Eigen::IndexPairList<Eigen::type2indexpair<1, 0>>())
               .contract(
                   k.template cast<Cx>(),

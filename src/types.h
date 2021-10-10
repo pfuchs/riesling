@@ -48,6 +48,7 @@ using Sz1 = Cx1::Dimensions;
 using Sz2 = Cx2::Dimensions;
 using Sz3 = Cx3::Dimensions;
 using Sz4 = Cx4::Dimensions;
+using Sz5 = Cx5::Dimensions;
 using Size2 = Eigen::Array<int16_t, 2, 1>;
 using Size3 = Eigen::Array<int16_t, 3, 1>;
 using Size4 = Eigen::Array<int16_t, 4, 1>;

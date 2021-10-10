@@ -27,7 +27,7 @@ struct ReconBasisOp final : Operator<4, 3>
 private:
   std::unique_ptr<GridBasisOp> gridder_;
   Cx5 mutable grid_;
-  SenseBasis sense_;
+  SenseBasisOp sense_;
   R3 apo_;
   FFT::ThreeDBasis fft_;
   Log log_;

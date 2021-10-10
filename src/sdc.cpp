@@ -7,7 +7,7 @@
 #include "trajectory.h"
 
 namespace SDC {
-void Load(
+void Choose(
     std::string const &iname, Trajectory const &traj, std::unique_ptr<GridOp> &gridder, Log &log)
 {
   if (iname == "") {

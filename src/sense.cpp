@@ -23,7 +23,7 @@ Cx4 DirectSENSE(
     Log &log)
 {
   auto gridder = make_grid(traj, os, kb, false, log, 8.f, false);
-  SDC::Load("pipe", traj, gridder, log);
+  SDC::Choose("pipe", traj, gridder, log);
 
   Cx4 grid = gridder->newMultichannel(data.dimension(0));
   FFT::ThreeDMulti fftN(grid, log);

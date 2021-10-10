@@ -9,7 +9,7 @@
 #include "sense.h"
 #include "tensorOps.h"
 
-int main_recon(args::Subparser &parser)
+int main_basis_recon(args::Subparser &parser)
 {
   COMMON_RECON_ARGS;
   COMMON_SENSE_ARGS;
@@ -42,7 +42,19 @@ int main_recon(args::Subparser &parser)
   }
 
   auto gridder = make_grid_basis(traj, osamp.Get(), kb, fastgrid, basis, log);
-  SDC::Load(sdc.Get(), traj, gridder, log);
+  {
+    HD5::Reader sdcReader(sdc.Get(), log);
+    auto const sdcInfo = sdcReader.readInfo();
+    if (sdcInfo.read_points != info.read_points || sdcInfo.spokes_total() != info.spokes_total()) {
+      Log::Fail(
+          "SDC trajectory dimensions {}x{} do not match main trajectory {}x{}",
+          sdcInfo.read_points,
+          sdcInfo.spokes_total(),
+          info.read_points,
+          info.spokes_total());
+    }
+    gridder->setSDC(sdcReader.readSDC(sdcInfo));
+  }
   gridder->setSDCExponent(sdc_exp.Get());
   Cropper cropper(info, gridder->gridDims(), out_fov.Get(), log);
   Sz3 const cropSz = cropper.size();

@@ -1,6 +1,6 @@
-#include "grid-kb.h"
-#include "grid-nn.h"
-#include "grid.h"
+#include "grid-basis-kb.h"
+#include "grid-basis-nn.h"
+#include "grid-basis.h"
 
 #include "../tensorOps.h"
 #include "../threads.h"

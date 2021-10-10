@@ -25,7 +25,7 @@ ReconOp::ReconOp(
         traj.info().channels);
   }
 
-  SDC::Load(sdc, traj, gridder_, log);
+  SDC::Choose(sdc, traj, gridder_, log);
 }
 
 Sz3 ReconOp::dimensions() const

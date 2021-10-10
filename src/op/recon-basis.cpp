@@ -1,5 +1,6 @@
-#include "recon.h"
+#include "recon-basis.h"
 
+#include "../io_hd5.h"
 #include "../sdc.h"
 #include "../threads.h"
 
@@ -12,12 +13,12 @@ ReconBasisOp::ReconBasisOp(
     Cx4 &maps,
     R2 &basis,
     Log &log)
-    : gridder_{make_grid(traj, os, kb, fast, basis, log)}
+    : gridder_{make_grid_basis(traj, os, kb, fast, basis, log)}
     , grid_{traj.info().channels,
             basis.dimension(1),
-            gridder_.dimension(0),
-            gridder_.dimension(1),
-            gridder_.dimension(2)}
+            gridder_->dimension(0),
+            gridder_->dimension(1),
+            gridder_->dimension(2)}
     , sense_{maps, grid_.dimensions()}
     , apo_{gridder_->apodization(sense_.dimensions())}
     , fft_{grid_, log}
@@ -30,7 +31,18 @@ ReconBasisOp::ReconBasisOp(
         traj.info().channels);
   }
 
-  SDC::Load(sdc, traj, gridder_, log);
+  HD5::Reader sdcReader(sdc, log);
+  auto const sdcInfo = sdcReader.readInfo();
+  if (sdcInfo.read_points != traj.info().read_points ||
+      sdcInfo.spokes_total() != traj.info().spokes_total()) {
+    Log::Fail(
+        "SDC trajectory dimensions {}x{} do not match main trajectory {}x{}",
+        sdcInfo.read_points,
+        sdcInfo.spokes_total(),
+        traj.info().read_points,
+        traj.info().spokes_total());
+  }
+  gridder_->setSDC(sdcReader.readSDC(sdcInfo));
 }
 
 Sz3 ReconBasisOp::dimensions() const
@@ -57,7 +69,7 @@ void ReconBasisOp::A(Input const &x, Output &y) const
   rshA.set(3, apo_.dimension(2));
   brdA.set(0, nB);
 
-  Cx3 apodised(x.dimensions());
+  Cx4 apodised(x.dimensions());
   apodised.device(dev) = x / apo_.cast<Cx>().reshape(rshA).broadcast(brdA);
   sense_.A(apodised, grid_);
   fft_.forward(grid_);

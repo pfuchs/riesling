@@ -44,7 +44,7 @@ Cx4 llr_patch(Cx4 const &x, float const l, long const p, Log &log)
   std::uniform_int_distribution<> int_dist(0, p - 1);
   for (long ii = 0; ii < 3; ii++) {
     if (x.dimension(ii + 1) % p != 0) {
-      log.fail(
+      Log::Fail(
           FMT_STRING("Patch size {} does not evenly divide {} (dimension {})"),
           p,
           x.dimension(ii + 1),

@@ -12,7 +12,7 @@
 #include "parse_args.h"
 #include "sense.h"
 
-int main_cg(args::Subparser &parser)
+int main_basis_admm(args::Subparser &parser)
 {
   COMMON_RECON_ARGS;
   COMMON_SENSE_ARGS;

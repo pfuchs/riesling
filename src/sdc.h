@@ -11,7 +11,7 @@ struct GridOp;
 
 namespace SDC {
 
-void Load(
+void Choose(
     std::string const &fname, Trajectory const &traj, std::unique_ptr<GridOp> &gridder, Log &log);
 R2 Pipe(Trajectory const &traj, std::unique_ptr<GridOp> &gridder, Log &log);
 R2 Radial(Trajectory const &traj, Log &log);

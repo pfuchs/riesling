@@ -19,7 +19,7 @@ GridBasisNN::GridBasisNN(
 {
 }
 
-void GridBasisNN::Adj(Input const &noncart, Output &cart) const
+void GridBasisNN::Adj(Output const &noncart, Input &cart) const
 {
   assert(cart.dimension(0) == noncart.dimension(0));
   assert(cart.dimension(1) == basis_.dimension(1));
@@ -72,14 +72,14 @@ void GridBasisNN::Adj(Input const &noncart, Output &cart) const
              noncart.chip(nc.spoke, 2).chip(nc.read, 1).constant(dc))
                 .reshape(rshNC)
                 .broadcast(brdNC) *
-            basis_.chip(nc.spoke % basis_.dimension(0)).cast<Cx>().reshape(rshB).broadcast(brdB);
+            basis_.chip(nc.spoke % basis_.dimension(0), 0).cast<Cx>().reshape(rshB).broadcast(brdB);
       } else {
         cart.chip(c.z, 3).chip(c.y, 2).chip(c.x, 1) +=
             (noncart.chip(nc.spoke, 2).chip(nc.read, 1) *
              noncart.chip(nc.spoke, 2).chip(nc.read, 1).constant(dc))
                 .reshape(rshNC)
                 .broadcast(brdNC) *
-            basis_.chip(nc.spoke % basis_.dimension(0)).cast<Cx>().reshape(rshB).broadcast(brdB);
+            basis_.chip(nc.spoke % basis_.dimension(0), 0).cast<Cx>().reshape(rshB).broadcast(brdB);
       }
     }
   };
@@ -101,7 +101,7 @@ void GridBasisNN::Adj(Input const &noncart, Output &cart) const
   log_.debug("Non-cart -> Cart: {}", log_.toNow(start));
 }
 
-void GridBasisNN::A(Output const &cart, Input &noncart) const
+void GridBasisNN::A(Input const &cart, Output &noncart) const
 {
   assert(cart.dimension(0) == noncart.dimension(0));
   assert(cart.dimension(1) == basis_.dimension(1));
@@ -118,7 +118,7 @@ void GridBasisNN::A(Output const &cart, Input &noncart) const
       auto const offset = mapping_.offset[si];
       noncart.chip(nc.spoke, 2).chip(nc.read, 1) =
           cart.chip(c.z, 4).chip(c.y, 3).chip(c.x, 2).contract(
-              basis_.chip(nc.spoke % basis_.dimension(0), 0),
+              basis_.chip(nc.spoke % basis_.dimension(0), 0).cast<Cx>(),
               Eigen::IndexPairList<Eigen::type2indexpair<1, 0>>());
     }
   };
