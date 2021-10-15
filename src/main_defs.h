@@ -3,6 +3,8 @@
 #include "parse_args.h"
 
 int main_basis_admm(args::Subparser &parser);
+int main_basis_blend(args::Subparser &parser);
+int main_basis_dict(args::Subparser &parser);
 int main_basis_recon(args::Subparser &parser);
 int main_basis_sim(args::Subparser &parser);
 int main_cg(args::Subparser &parser);

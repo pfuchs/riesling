@@ -6,7 +6,7 @@
 
 struct GridBasisOp : Operator<5, 3>
 {
-  GridBasisOp(Mapping map, bool const unsafe, R2 &basis, Log &log);
+  GridBasisOp(Mapping map, bool const unsafe, R2 basis, Log &log);
   virtual ~GridBasisOp(){};
 
   virtual void A(Input const &x, Output &y) const = 0;
@@ -26,6 +26,8 @@ struct GridBasisOp : Operator<5, 3>
   void sqrtOn(); // Use square-root of gridding kernel for Pipe SDC
   void sqrtOff();
   virtual R3 apodization(Sz3 const sz) const = 0; // Calculate the apodization factor for this grid
+  Mapping const &mapping() const;
+  R2 const &basis() const;
 
 protected:
   Mapping mapping_;

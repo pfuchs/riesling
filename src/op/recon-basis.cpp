@@ -3,6 +3,7 @@
 #include "../io_hd5.h"
 #include "../sdc.h"
 #include "../threads.h"
+#include "grid.h"
 
 ReconBasisOp::ReconBasisOp(
     Trajectory const &traj,
@@ -15,7 +16,7 @@ ReconBasisOp::ReconBasisOp(
     Log &log)
     : gridder_{make_grid_basis(traj, os, kb, fast, basis, log)}
     , grid_{traj.info().channels,
-            basis.dimension(1),
+            gridder_->basis().dimension(1),
             gridder_->dimension(0),
             gridder_->dimension(1),
             gridder_->dimension(2)}
@@ -24,6 +25,7 @@ ReconBasisOp::ReconBasisOp(
     , fft_{grid_, log}
     , log_{log}
 {
+  fmt::print("Grid dimensions {}\n", fmt::join(grid_.dimensions(), ","));
   if (sense_.channels() != traj.info().channels) {
     Log::Fail(
         "Number of SENSE channels {} did not match data channels {}",
@@ -31,18 +33,8 @@ ReconBasisOp::ReconBasisOp(
         traj.info().channels);
   }
 
-  HD5::Reader sdcReader(sdc, log);
-  auto const sdcInfo = sdcReader.readInfo();
-  if (sdcInfo.read_points != traj.info().read_points ||
-      sdcInfo.spokes_total() != traj.info().spokes_total()) {
-    Log::Fail(
-        "SDC trajectory dimensions {}x{} do not match main trajectory {}x{}",
-        sdcInfo.read_points,
-        sdcInfo.spokes_total(),
-        traj.info().read_points,
-        traj.info().spokes_total());
-  }
-  gridder_->setSDC(sdcReader.readSDC(sdcInfo));
+  auto grid1 = make_grid(gridder_->mapping(), kb, fast, log);
+  SDC::Choose(sdc, traj, grid1, gridder_, log);
 }
 
 Sz3 ReconBasisOp::dimensions() const

@@ -49,6 +49,7 @@ int main_basis_admm(args::Subparser &parser)
           basis.dimension(0),
           info.spokes_total());
     }
+    log.info("Basis has {} vectors with {} entries", nB, basis.dimension(0));
   }
 
   long currentVolume = -1;
@@ -87,7 +88,7 @@ int main_basis_admm(args::Subparser &parser)
   }
   log.info("All Volumes: {}", log.toNow(all_start));
   WriteBasisVolumes(
-      out, basis, mag, false, info, iname.Get(), oname.Get(), "cg", oftype.Get(), log);
+      out, basis, mag, false, info, iname.Get(), oname.Get(), "admm", oftype.Get(), log);
   FFT::End(log);
   return EXIT_SUCCESS;
 }

@@ -9,14 +9,15 @@
 #include <cfenv>
 #include <cmath>
 
-GridBasisOp::GridBasisOp(Mapping map, bool const unsafe, R2 &basis, Log &log)
+GridBasisOp::GridBasisOp(Mapping map, bool const unsafe, R2 basis, Log &log)
     : mapping_{std::move(map)}
     , safe_{!unsafe}
     , sqrt_{false}
     , log_{log}
     , DCexp_{1.f}
-    , basis_{std::move(basis)}
+    , basis_{basis}
 {
+  log_.info("Basis size {}x{}", basis_.dimension(0), basis_.dimension(1));
 }
 
 long GridBasisOp::dimension(long const D) const
@@ -74,6 +75,16 @@ void GridBasisOp::sqrtOn()
 void GridBasisOp::sqrtOff()
 {
   sqrt_ = false;
+}
+
+Mapping const &GridBasisOp::mapping() const
+{
+  return mapping_;
+}
+
+R2 const &GridBasisOp::basis() const
+{
+  return basis_;
 }
 
 std::unique_ptr<GridBasisOp> make_grid_basis(

@@ -12,6 +12,10 @@ struct GridNN final : GridOp
       Log &log,
       float const inRes = -1.f,
       bool const shrink = false);
+  GridNN(
+      Mapping const &map,
+      bool const unsafe,
+      Log &log);
 
   void A(Input const &x, Output &y) const;
   void Adj(Output const &x, Input &y) const;

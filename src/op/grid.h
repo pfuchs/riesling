@@ -25,6 +25,7 @@ struct GridOp : Operator<4, 3>
   void sqrtOn(); // Use square-root of gridding kernel for Pipe SDC
   void sqrtOff();
   virtual R3 apodization(Sz3 const sz) const = 0; // Calculate the apodization factor for this grid
+  Mapping const &mapping() const;
 
 protected:
   Mapping mapping_;
@@ -41,12 +42,8 @@ std::unique_ptr<GridOp> make_grid(
     Log &log,
     float const res = -1.f,
     bool const shrink = false);
-
-std::unique_ptr<GridOp> make_grid_basis(
-    Trajectory const &traj,
-    float const os,
+std::unique_ptr<GridOp> make_grid(
+    Mapping const &mapping,
     bool const kb,
     bool const fastgrid,
-    Log &log,
-    float const res = -1.f,
-    bool const shrink = false);
+    Log &log);

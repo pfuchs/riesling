@@ -114,7 +114,8 @@ Trajectory::mapping(float const os, long const kRad, float const inRes, bool con
       FMT_STRING("Generating mapping to grid size {} at {} mm effective resolution"), gridSz, res);
 
   Mapping mapping;
-  switch (info_.type) {
+  mapping.type = info_.type;
+  switch (mapping.type) {
   case Info::Type::ThreeD:
     mapping.cartDims = Sz3{gridSz, gridSz, gridSz};
     break;

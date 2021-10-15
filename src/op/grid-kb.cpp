@@ -30,6 +30,25 @@ GridKB<InPlane, ThroughPlane>::GridKB(
   std::iota(indThrough_.data(), indThrough_.data() + ThroughPlane, -ThroughPlane / 2);
 }
 
+template <int InPlane, int ThroughPlane>
+GridKB<InPlane, ThroughPlane>::GridKB(
+    Mapping const &mapping,
+    bool const unsafe,
+    Log &log)
+    : GridOp(mapping, unsafe, log)
+    , betaIn_{(float)M_PI *
+              sqrtf(pow(InPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
+    , betaThrough_{(float)M_PI *
+                   sqrtf(pow(ThroughPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
+    , fft_{Sz3{InPlane, InPlane, ThroughPlane}, Log(), 1}
+{
+
+  // Array of indices used when building the kernel
+  std::iota(indIn_.data(), indIn_.data() + InPlane, -InPlane / 2);
+  std::iota(indThrough_.data(), indThrough_.data() + ThroughPlane, -ThroughPlane / 2);
+}
+
+
 template <int W, typename T>
 inline decltype(auto) KB(T const &x, float const beta)
 {

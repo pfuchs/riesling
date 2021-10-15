@@ -19,6 +19,4 @@ struct GridBasisNN final : GridBasisOp
 
   R3 apodization(Sz3 const sz) const;
 
-private:
-  R2 basis_;
 };

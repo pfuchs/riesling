@@ -17,6 +17,7 @@ struct NoncartesianIndex
 
 struct Mapping
 {
+  Info::Type type;
   std::vector<CartesianIndex> cart;
   std::vector<NoncartesianIndex> noncart;
   std::vector<float> sdc;

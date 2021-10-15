@@ -74,7 +74,7 @@ void GridBasisNN::Adj(Output const &noncart, Input &cart) const
                 .broadcast(brdNC) *
             basis_.chip(nc.spoke % basis_.dimension(0), 0).cast<Cx>().reshape(rshB).broadcast(brdB);
       } else {
-        cart.chip(c.z, 3).chip(c.y, 2).chip(c.x, 1) +=
+        cart.chip(c.z, 4).chip(c.y, 3).chip(c.x, 2) +=
             (noncart.chip(nc.spoke, 2).chip(nc.read, 1) *
              noncart.chip(nc.spoke, 2).chip(nc.read, 1).constant(dc))
                 .reshape(rshNC)
