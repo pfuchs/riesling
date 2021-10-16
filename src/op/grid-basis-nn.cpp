@@ -28,7 +28,6 @@ void GridBasisNN::Adj(Output const &noncart, Input &cart) const
   assert(cart.dimension(4) == mapping_.cartDims[2]);
   assert(mapping_.sortedIndices.size() == mapping_.cart.size());
 
-  using FixZero = Eigen::type2index<0>;
   using FixOne = Eigen::type2index<1>;
   long const nchan = cart.dimension(0);
   long const nB = cart.dimension(1);
@@ -65,7 +64,6 @@ void GridBasisNN::Adj(Output const &noncart, Input &cart) const
       auto const c = mapping_.cart[si];
       auto const nc = mapping_.noncart[si];
       auto const dc = pow(mapping_.sdc[si], DCexp_);
-      auto const offset = mapping_.offset[si];
       if (safe_) {
         workspace[ti].chip(c.z - minZ[ti], 4).chip(c.y, 3).chip(c.x, 2) +=
             (noncart.chip(nc.spoke, 2).chip(nc.read, 1) *
@@ -92,8 +90,8 @@ void GridBasisNN::Adj(Output const &noncart, Input &cart) const
     for (long ti = 0; ti < nThreads; ti++) {
       if (szZ[ti]) {
         cart.slice(
-                Sz4{0, 0, 0, minZ[ti]},
-                Sz4{cart.dimension(0), cart.dimension(1), cart.dimension(2), szZ[ti]})
+                Sz5{0, 0, 0, 0, minZ[ti]},
+                Sz5{cart.dimension(0), cart.dimension(1), cart.dimension(2), cart.dimension(3), szZ[ti]})
             .device(dev) += workspace[ti];
       }
     }
@@ -115,7 +113,6 @@ void GridBasisNN::A(Input const &cart, Output &noncart) const
       auto const si = mapping_.sortedIndices[ii];
       auto const c = mapping_.cart[si];
       auto const nc = mapping_.noncart[si];
-      auto const offset = mapping_.offset[si];
       noncart.chip(nc.spoke, 2).chip(nc.read, 1) =
           cart.chip(c.z, 4).chip(c.y, 3).chip(c.x, 2).contract(
               basis_.chip(nc.spoke % basis_.dimension(0), 0).cast<Cx>(),

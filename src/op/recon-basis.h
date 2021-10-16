@@ -22,6 +22,7 @@ struct ReconBasisOp final : Operator<4, 3>
   void Adj(Output const &x, Input &y) const;
 
   Sz3 dimensions() const;
+  Sz3 outputDimensions() const;
   void setPreconditioning(float const p);
 
 private:

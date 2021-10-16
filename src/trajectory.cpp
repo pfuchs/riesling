@@ -123,6 +123,7 @@ Trajectory::mapping(float const os, long const kRad, float const inRes, bool con
     mapping.cartDims = Sz3{gridSz, gridSz, info_.matrix[2]};
     break;
   }
+  mapping.noncartDims = Sz3{info_.channels, info_.read_points, info_.spokes_total()};
   mapping.osamp = os;
   long const totalSz = info_.read_points * info_.spokes_total();
   mapping.cart.reserve(totalSz);

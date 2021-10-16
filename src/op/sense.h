@@ -12,6 +12,7 @@ struct SenseOp final : Operator<3, 4>
 
   long channels() const;
   Sz3 dimensions() const;
+  Sz4 outputDimensions() const;
 
 private:
   Output maps_;
@@ -28,6 +29,7 @@ struct SenseBasisOp final : Operator<4, 5>
 
   long channels() const;
   Sz3 dimensions() const;
+  Sz5 outputDimensions() const;
 
 private:
   Cx4 maps_;

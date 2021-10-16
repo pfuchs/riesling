@@ -13,7 +13,7 @@ struct CropOp final : Operator<Rank, Rank>
 
   CropOp(InputDims const &bigSize, OutputDims const &smallSize);
   InputDims bigDimensions() const;
-  OutputDims smallDimensions() const;
+  OutputDims outputDimensions() const;
 
   void A(Input const &x, Output &y) const;
   void Adj(Output const &x, Input &y) const;

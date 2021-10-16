@@ -33,6 +33,11 @@ Sz3 ReconOp::dimensions() const
   return sense_.dimensions();
 }
 
+Sz3 ReconOp::outputDimensions() const
+{
+  return gridder_->outputDimensions();
+}
+
 void ReconOp::setPreconditioning(float const p)
 {
   gridder_->setSDCExponent(p);

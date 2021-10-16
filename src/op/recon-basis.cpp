@@ -25,7 +25,6 @@ ReconBasisOp::ReconBasisOp(
     , fft_{grid_, log}
     , log_{log}
 {
-  fmt::print("Grid dimensions {}\n", fmt::join(grid_.dimensions(), ","));
   if (sense_.channels() != traj.info().channels) {
     Log::Fail(
         "Number of SENSE channels {} did not match data channels {}",
@@ -40,6 +39,11 @@ ReconBasisOp::ReconBasisOp(
 Sz3 ReconBasisOp::dimensions() const
 {
   return sense_.dimensions();
+}
+
+Sz3 ReconBasisOp::outputDimensions() const
+{
+  return gridder_->outputDimensions();
 }
 
 void ReconBasisOp::setPreconditioning(float const p)
@@ -78,7 +82,7 @@ void ReconBasisOp::Adj(Output const &x, Input &y) const
   sense_.Adj(grid_, y);
 
   using FixOne = Eigen::type2index<1>;
-  long const nB = x.dimension(0);
+  long const nB = y.dimension(0);
   Eigen::IndexList<FixOne, int, int, int> rshA;
   Eigen::IndexList<int, FixOne, FixOne, FixOne> brdA;
   rshA.set(1, apo_.dimension(0));

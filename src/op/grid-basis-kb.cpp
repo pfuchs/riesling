@@ -158,8 +158,8 @@ void GridBasisKB<InPlane, ThroughPlane>::Adj(Output const &noncart, Input &cart)
     for (long ti = 0; ti < nThreads; ti++) {
       if (szZ[ti]) {
         cart.slice(
-                Sz4{0, 0, 0, minZ[ti]},
-                Sz4{cart.dimension(0), cart.dimension(1), cart.dimension(2), szZ[ti]})
+                Sz5{0, 0, 0, 0, minZ[ti]},
+                Sz5{cart.dimension(0), cart.dimension(1), cart.dimension(2), cart.dimension(3), szZ[ti]})
             .device(dev) += workspace[ti];
       }
     }

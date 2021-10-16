@@ -13,7 +13,7 @@ struct GridBasisOp : Operator<5, 3>
   virtual void Adj(Output const &x, Input &y) const = 0;
 
   Input::Dimensions inSize() const;
-  Output::Dimensions outSize() const;
+  Output::Dimensions outputDimensions() const;
 
   Sz3 gridDims() const;                        // Returns the dimensions of the grid
   long dimension(long const D) const;          // Returns a specific grid dimension

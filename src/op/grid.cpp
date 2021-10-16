@@ -23,6 +23,11 @@ Sz3 GridOp::gridDims() const
   return mapping_.cartDims;
 }
 
+Sz3 GridOp::outputDimensions() const
+{
+  return mapping_.noncartDims;
+}
+
 Cx4 GridOp::newMultichannel(long const nc) const
 {
   Cx4 g(nc, mapping_.cartDims[0], mapping_.cartDims[1], mapping_.cartDims[2]);

@@ -26,7 +26,7 @@ typename CropOp<Rank>::InputDims CropOp<Rank>::bigDimensions() const
 }
 
 template <int Rank>
-typename CropOp<Rank>::OutputDims CropOp<Rank>::smallDimensions() const
+typename CropOp<Rank>::OutputDims CropOp<Rank>::outputDimensions() const
 {
   return size_;
 }

@@ -28,6 +28,11 @@ Sz3 SenseOp::dimensions() const
   return Sz3{maps_.dimension(1), maps_.dimension(2), maps_.dimension(3)};
 }
 
+Sz4 SenseOp::outputDimensions() const
+{
+  return full_;
+}
+
 void SenseOp::A(Input const &x, Output &y) const
 {
   assert(x.dimension(0) == maps_.dimension(1));
@@ -104,6 +109,12 @@ Sz3 SenseBasisOp::dimensions() const
   return Sz3{maps_.dimension(1), maps_.dimension(2), maps_.dimension(3)};
 }
 
+Sz5 SenseBasisOp::outputDimensions() const
+{
+  return full_;
+}
+
+
 void SenseBasisOp::A(Input const &x, Output &y) const
 {
   assert(x.dimension(1) == maps_.dimension(1));
@@ -115,19 +126,22 @@ void SenseBasisOp::A(Input const &x, Output &y) const
   assert(y.dimension(3) == (maps_.dimension(2) + left_[3] + right_[3]));
   assert(y.dimension(4) == (maps_.dimension(3) + left_[4] + right_[4]));
 
-  Eigen::IndexList<Eigen::type2index<1>, int, int, int, int> res;
-  res.set(1, x.dimension(0));
-  res.set(2, x.dimension(1));
-  res.set(3, x.dimension(2));
-  res.set(4, x.dimension(3));
-  Eigen::IndexList<
-      int,
-      Eigen::type2index<1>,
-      Eigen::type2index<1>,
-      Eigen::type2index<1>,
-      Eigen::type2index<1>>
-      brd;
-  brd.set(0, maps_.dimension(0));
+  using FixOne = Eigen::type2index<1>;
+  Eigen::IndexList<FixOne, int, int, int, int> resX;
+  resX.set(1, x.dimension(0));
+  resX.set(2, x.dimension(1));
+  resX.set(3, x.dimension(2));
+  resX.set(4, x.dimension(3));
+  Eigen::IndexList<int, FixOne, FixOne, FixOne, FixOne> brdX;
+  brdX.set(0, maps_.dimension(0));
+
+  Eigen::IndexList<int, FixOne, int, int, int> resMaps;
+  resMaps.set(0, maps_.dimension(0));
+  resMaps.set(2, maps_.dimension(1));
+  resMaps.set(3, maps_.dimension(2));
+  resMaps.set(4, maps_.dimension(3));
+  Eigen::IndexList<FixOne, int, FixOne, FixOne, FixOne> brdMaps;
+  brdMaps.set(1, x.dimension(0));
 
   Eigen::array<std::pair<int, int>, 5> paddings;
   std::transform(
@@ -135,19 +149,30 @@ void SenseBasisOp::A(Input const &x, Output &y) const
         return std::make_pair(left, right);
       });
 
-  y.device(Threads::GlobalDevice()) = (x.reshape(res).broadcast(brd) * maps_).pad(paddings);
+  y.device(Threads::GlobalDevice()) = (x.reshape(resX).broadcast(brdX) * maps_.reshape(resMaps).broadcast(brdMaps)).pad(paddings);
 }
 
 void SenseBasisOp::Adj(Output const &x, Input &y) const
 {
   assert(x.dimension(0) == maps_.dimension(0));
-  assert(x.dimension(1) == (maps_.dimension(1) + left_[1] + right_[1]));
-  assert(x.dimension(2) == (maps_.dimension(2) + left_[2] + right_[2]));
-  assert(x.dimension(3) == (maps_.dimension(3) + left_[3] + right_[3]));
-  assert(y.dimension(0) == maps_.dimension(1));
-  assert(y.dimension(1) == maps_.dimension(2));
-  assert(y.dimension(2) == maps_.dimension(3));
-  y.device(Threads::GlobalDevice()) = ConjugateSum(x.slice(left_, size_), maps_);
+  assert(x.dimension(1) == y.dimension(0));
+  assert(x.dimension(2) == (maps_.dimension(1) + left_[2] + right_[4]));
+  assert(x.dimension(3) == (maps_.dimension(2) + left_[3] + right_[3]));
+  assert(x.dimension(4) == (maps_.dimension(3) + left_[4] + right_[4]));
+  assert(y.dimension(1) == maps_.dimension(1));
+  assert(y.dimension(2) == maps_.dimension(2));
+  assert(y.dimension(3) == maps_.dimension(3));
+
+  using FixOne = Eigen::type2index<1>;
+  Eigen::IndexList<int, FixOne, int, int, int> resMaps;
+  resMaps.set(0, maps_.dimension(0));
+  resMaps.set(2, maps_.dimension(1));
+  resMaps.set(3, maps_.dimension(2));
+  resMaps.set(4, maps_.dimension(3));
+  Eigen::IndexList<FixOne, int, FixOne, FixOne, FixOne> brdMaps;
+  brdMaps.set(1, x.dimension(1));
+
+  y.device(Threads::GlobalDevice()) = ConjugateSum(x.slice(left_, size_), maps_.reshape(resMaps).broadcast(brdMaps));
 }
 
 void SenseBasisOp::AdjA(Input const &x, Input &y) const

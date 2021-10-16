@@ -13,7 +13,7 @@ struct GridOp : Operator<4, 3>
   virtual void Adj(Output const &x, Input &y) const = 0;
 
   Input::Dimensions inSize() const;
-  Output::Dimensions outSize() const;
+  Output::Dimensions outputDimensions() const;
 
   Sz3 gridDims() const;                        // Returns the dimensions of the grid
   Cx4 newMultichannel(long const nChan) const; // Returns a correctly sized multi-channel grid

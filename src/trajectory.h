@@ -23,7 +23,7 @@ struct Mapping
   std::vector<float> sdc;
   std::vector<Point3> offset;
   std::vector<int32_t> sortedIndices;
-  Sz3 cartDims;
+  Sz3 cartDims, noncartDims;
   float osamp;
 };
 
