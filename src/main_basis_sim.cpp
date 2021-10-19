@@ -3,8 +3,8 @@
 #include "io_hd5.h"
 #include "log.h"
 #include "parse_args.h"
-#include "sim-prep.h"
 #include "sim-eddy.h"
+#include "sim-prep.h"
 
 int main_basis_sim(args::Subparser &parser)
 {
@@ -28,6 +28,7 @@ int main_basis_sim(args::Subparser &parser)
   args::ValueFlag<float> bHi(parser, "β", "High value for β (default 1)", {"betahi"}, 1.f);
   args::ValueFlag<long> nb(
       parser, "N", "Number of beta values for basis (default 128)", {"nbeta"}, 32);
+  args::Flag bLog(parser, "", "Use logarithmic spacing for β", {"betalog"});
   args::ValueFlag<long> ng(parser, "N", "Number of eddy-current angles", {"eddy"}, 32);
   args::Flag pc(parser, "PC", "Uses 0/180 phase-cycling", {"pc"});
   args::ValueFlag<float> thresh(
@@ -46,8 +47,8 @@ int main_basis_sim(args::Subparser &parser)
     results = Sim::PhaseCycled(
         nT1.Get(), T1Lo.Get(), T1Hi.Get(), nb.Get(), bLo.Get(), bHi.Get(), seq, log);
   } else {
-    results =
-        Sim::Simple(nT1.Get(), T1Lo.Get(), T1Hi.Get(), nb.Get(), bLo.Get(), bHi.Get(), seq, log);
+    results = Sim::Simple(
+        nT1.Get(), T1Lo.Get(), T1Hi.Get(), nb.Get(), bLo.Get(), bHi.Get(), bLog, seq, log);
   }
   // Calculate SVD
   log.info("Calculating SVD {}x{}", results.dynamics.rows(), results.dynamics.cols());

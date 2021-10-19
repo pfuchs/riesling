@@ -13,6 +13,7 @@ SimResult Simple(
     long const nbeta,
     float const betaLo,
     float const betaHi,
+    bool const betaLog,
     Sequence const seq,
     Log &log);
 

@@ -11,6 +11,7 @@ SimResult Simple(
     long const nbeta,
     float const betaLo,
     float const betaHi,
+    bool const betaLog,
     Sequence const seq,
     Log &log)
 {
@@ -48,7 +49,9 @@ SimResult Simple(
 
     for (long ib = 0; ib < nbeta; ib++) {
       float const fib = ib / (nbeta - 1.f);
-      float const beta = betaLo * std::pow(betaHi / betaLo, fib);
+      float const ref = 0.1;
+      float const beta = betaLog ? (ref * std::pow((betaHi - betaLo) / ref, fib) - (ref - betaLo))
+                                 : (betaLo + fib * (betaHi - betaLo));
       Eigen::Matrix2f B;
       B << beta, 0.f, 0.f, 1.f;
 
