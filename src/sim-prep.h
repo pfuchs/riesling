@@ -14,6 +14,9 @@ SimResult Simple(
     float const betaLo,
     float const betaHi,
     bool const betaLog,
+    long const nB1,
+    float const B1Lo,
+    float const B1Hi,
     Sequence const seq,
     Log &log);
 
