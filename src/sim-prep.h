@@ -6,28 +6,11 @@
 
 namespace Sim {
 
-SimResult Simple(
-    long const nT1,
-    float const T1Lo,
-    float const T1Hi,
-    long const nbeta,
-    float const betaLo,
-    float const betaHi,
-    bool const betaLog,
-    long const nB1,
-    float const B1Lo,
-    float const B1Hi,
-    Sequence const seq,
-    Log &log);
-
-SimResult PhaseCycled(
-    long const nT1,
-    float const T1Lo,
-    float const T1Hi,
-    long const nbeta,
-    float const betaLo,
-    float const betaHi,
-    Sequence const seq,
-    Log &log);
+Result Simple(
+  Parameter const T1p,
+  Parameter const betap,
+  Parameter const B1p,
+  Sequence const seq,
+  Log &log);
 
 } // namespace Sim

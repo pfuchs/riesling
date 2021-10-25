@@ -35,7 +35,9 @@ int main_basis_sim(args::Subparser &parser)
   args::ValueFlag<float> B1Hi(parser, "B1", "High value for B1 (default 1.3)", {"B1hi"}, 1.3f);
 
   args::ValueFlag<long> ng(parser, "N", "Number of eddy-current angles", {"eddy"}, 32);
-  args::Flag pc(parser, "PC", "Uses 0/180 phase-cycling", {"pc"});
+  args::ValueFlag<float> gLo(parser, "ɣ", "Low value for eddy-current angles (default -π)", {"eddylo"}, -M_PI);
+  args::ValueFlag<float> gHi(parser, "ɣ", "High value for eddy-current angles (default π)", {"eddyhi"}, M_PI);
+  args::Flag negPC(parser, "-PC", "Phase-cycling increment is negative", {"negpc"});
   args::ValueFlag<float> thresh(
       parser, "T", "Threshold for SVD retention (default 0.05)", {"thresh"}, 0.05);
   args::ValueFlag<long> nBasis(
@@ -43,28 +45,16 @@ int main_basis_sim(args::Subparser &parser)
 
   Log log = ParseCommand(parser);
 
-  Sequence const seq{sps.Get(), alpha.Get(), TR.Get(), TI.Get(), Trec.Get()};
-  SimResult results;
+  Sim::Sequence const seq{sps.Get(), alpha.Get(), TR.Get(), TI.Get(), Trec.Get()};
+  Sim::Parameter const T1{nT1.Get(), T1Lo.Get(), T1Hi.Get(), true};
+  Sim::Parameter const beta{nb.Get(), bLo.Get(), bHi.Get(), bLog};
+  Sim::Parameter const B1{nB1.Get(), B1Lo.Get(), B1Hi.Get(), false};
+  Sim::Result results;
   if (ng) {
-    results = Sim::Diffusion(
-        nT1.Get(), T1Lo.Get(), T1Hi.Get(), nb.Get(), bLo.Get(), bHi.Get(), ng.Get(), seq, log);
-  } else if (pc) {
-    results = Sim::PhaseCycled(
-        nT1.Get(), T1Lo.Get(), T1Hi.Get(), nb.Get(), bLo.Get(), bHi.Get(), seq, log);
+    Sim::Parameter const gamma{ng.Get(), gLo.Get(), gHi.Get(), false};
+    results = Sim::Eddy(T1, beta, gamma, B1, negPC,  seq, log);
   } else {
-    results = Sim::Simple(
-        nT1.Get(),
-        T1Lo.Get(),
-        T1Hi.Get(),
-        nb.Get(),
-        bLo.Get(),
-        bHi.Get(),
-        bLog,
-        nB1.Get(),
-        B1Lo.Get(),
-        B1Hi.Get(),
-        seq,
-        log);
+    results = Sim::Simple(T1, beta, B1, seq, log);
   }
   // Calculate SVD
   log.info("Calculating SVD {}x{}", results.dynamics.rows(), results.dynamics.cols());
