@@ -39,7 +39,7 @@ int main_basis_sim(args::Subparser &parser)
   args::ValueFlag<float> gHi(parser, "ɣ", "High value for eddy-current angles (default π)", {"eddyhi"}, M_PI);
   args::Flag negPC(parser, "-PC", "Phase-cycling increment is negative", {"negpc"});
   args::ValueFlag<float> thresh(
-      parser, "T", "Threshold for SVD retention (default 0.05)", {"thresh"}, 0.05);
+      parser, "T", "Threshold for SVD retention (default 95%)", {"thresh"}, 95.f);
   args::ValueFlag<long> nBasis(
       parser, "N", "Number of basis vectors to retain (overrides threshold)", {"nbasis"}, 0);
 
@@ -56,26 +56,25 @@ int main_basis_sim(args::Subparser &parser)
   } else {
     results = Sim::Simple(T1, beta, B1, seq, log);
   }
+  long const nT = results.dynamics.cols(); // Number of timepoints in sim
+
   // Calculate SVD
   log.info("Calculating SVD {}x{}", results.dynamics.rows(), results.dynamics.cols());
   auto const svd = results.dynamics.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
   float const flip = (svd.matrixV().leftCols(1)(0) < 0) ? -1.f : 1.f;
-
-  long const nT = results.dynamics.cols(); // Number of timepoints in sim
+  Eigen::ArrayXf const vals = svd.singularValues().array().square();
+  Eigen::ArrayXf cumsum(vals.rows());
+  std::partial_sum(vals.begin(), vals.end(), cumsum.begin());
+  cumsum = 100.f * cumsum / cumsum.tail(1)[0];
   long nRetain = 0;
   if (nBasis) {
     nRetain = nBasis.Get();
-    log.info("Retaining {} basis vectors", nRetain);
   } else {
-    Eigen::ArrayXf vals = svd.singularValues();
-    float const valsSum = vals.square().sum();
-    nRetain = (vals.square() > (valsSum * thresh.Get())).count();
-    log.info(
-        "{} singular values are above {} threshold: {}",
-        nRetain,
-        thresh.Get(),
-        vals.head(nRetain).transpose());
+    nRetain = (cumsum < thresh.Get()).count();
   }
+  log.info("Retaining {} basis vectors, cumulative energy: {}\n",
+           nRetain,
+           cumsum.head(nRetain).transpose());
   Eigen::MatrixXf const basisMat = flip * svd.matrixV().leftCols(nRetain) * std::sqrt(nT);
   log.info("Computing dictionary");
   Eigen::MatrixXf const D = svd.matrixU().leftCols(nRetain) *
