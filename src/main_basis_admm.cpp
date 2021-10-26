@@ -43,12 +43,12 @@ int main_basis_admm(args::Subparser &parser)
     basis = basisReader.readBasis();
     nB = basis.dimension(1);
 
-    if ((info.spokes_total() % basis.dimension(0)) != 0) {
-      Log::Fail(
-          FMT_STRING("Basis length {} does not evenly divide number of spokes {}"),
-          basis.dimension(0),
-          info.spokes_total());
-    }
+    // if ((info.spokes_total() % basis.dimension(0)) != 0) {
+    //   Log::Fail(
+    //       FMT_STRING("Basis length {} does not evenly divide number of spokes {}"),
+    //       basis.dimension(0),
+    //       info.spokes_total());
+    // }
     log.info("Basis has {} vectors with {} entries", nB, basis.dimension(0));
   }
 
