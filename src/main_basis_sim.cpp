@@ -37,7 +37,7 @@ int main_basis_sim(args::Subparser &parser)
   args::ValueFlag<long> ng(parser, "N", "Number of eddy-current angles", {"eddy"}, 32);
   args::ValueFlag<float> gLo(parser, "ɣ", "Low value for eddy-current angles (default -π)", {"eddylo"}, -M_PI);
   args::ValueFlag<float> gHi(parser, "ɣ", "High value for eddy-current angles (default π)", {"eddyhi"}, M_PI);
-  args::Flag negPC(parser, "-PC", "Phase-cycling increment is negative", {"negpc"});
+
   args::ValueFlag<float> thresh(
       parser, "T", "Threshold for SVD retention (default 95%)", {"thresh"}, 95.f);
   args::ValueFlag<long> nBasis(
@@ -52,7 +52,7 @@ int main_basis_sim(args::Subparser &parser)
   Sim::Result results;
   if (ng) {
     Sim::Parameter const gamma{ng.Get(), gLo.Get(), gHi.Get(), false};
-    results = Sim::Eddy(T1, beta, gamma, B1, negPC,  seq, log);
+    results = Sim::Eddy(T1, beta, gamma, B1,  seq, log);
   } else {
     results = Sim::Simple(T1, beta, B1, seq, log);
   }
