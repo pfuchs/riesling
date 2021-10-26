@@ -61,7 +61,6 @@ int main_basis_sim(args::Subparser &parser)
   // Calculate SVD
   log.info("Calculating SVD {}x{}", results.dynamics.rows(), results.dynamics.cols());
   auto const svd = results.dynamics.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
-  float const flip = (svd.matrixV().leftCols(1)(0) < 0) ? -1.f : 1.f;
   Eigen::ArrayXf const vals = svd.singularValues().array().square();
   Eigen::ArrayXf cumsum(vals.rows());
   std::partial_sum(vals.begin(), vals.end(), cumsum.begin());
@@ -75,6 +74,7 @@ int main_basis_sim(args::Subparser &parser)
   log.info("Retaining {} basis vectors, cumulative energy: {}\n",
            nRetain,
            cumsum.head(nRetain).transpose());
+  float const flip = (svd.matrixV().leftCols(1)(0) < 0) ? -1.f : 1.f;
   Eigen::MatrixXf const basisMat = flip * svd.matrixV().leftCols(nRetain) * std::sqrt(nT);
   log.info("Computing dictionary");
   Eigen::MatrixXf const D = svd.matrixU().leftCols(nRetain) *
