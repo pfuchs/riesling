@@ -4,8 +4,8 @@
 #include "log.h"
 #include "parse_args.h"
 #include "sim-eddy.h"
-#include "sim-prep.h"
 #include "sim-mupa.h"
+#include "sim-prep.h"
 
 int main_basis_sim(args::Subparser &parser)
 {
@@ -36,13 +36,15 @@ int main_basis_sim(args::Subparser &parser)
   args::ValueFlag<float> B1Hi(parser, "B1", "High value for B1 (default 1.3)", {"B1hi"}, 1.3f);
 
   args::ValueFlag<long> ng(parser, "N", "Number of eddy-current angles", {"eddy"}, 32);
-  args::ValueFlag<float> gLo(parser, "ɣ", "Low value for eddy-current angles (default -π)", {"eddylo"}, -M_PI);
-  args::ValueFlag<float> gHi(parser, "ɣ", "High value for eddy-current angles (default π)", {"eddyhi"}, M_PI);
+  args::ValueFlag<float> gLo(
+      parser, "ɣ", "Low value for eddy-current angles (default -π)", {"eddylo"}, -M_PI);
+  args::ValueFlag<float> gHi(
+      parser, "ɣ", "High value for eddy-current angles (default π)", {"eddyhi"}, M_PI);
 
   args::Flag mupa(parser, "M", "Run a MUPA simulation", {"mupa"});
 
   args::ValueFlag<float> thresh(
-      parser, "T", "Threshold for SVD retention (default 95%)", {"thresh"}, 95.f);
+      parser, "T", "Threshold for SVD retention (default 95%)", {"thresh"}, 99.f);
   args::ValueFlag<long> nBasis(
       parser, "N", "Number of basis vectors to retain (overrides threshold)", {"nbasis"}, 0);
 
@@ -55,7 +57,7 @@ int main_basis_sim(args::Subparser &parser)
   Sim::Result results;
   if (ng) {
     Sim::Parameter const gamma{ng.Get(), gLo.Get(), gHi.Get(), false};
-    results = Sim::Eddy(T1, beta, gamma, B1,  seq, log);
+    results = Sim::Eddy(T1, beta, gamma, B1, seq, log);
   } else if (mupa) {
     Sim::Parameter const T2{65, 0.02, 0.2, true};
     results = Sim::MUPA(T1, T2, B1, seq, log);
@@ -77,9 +79,10 @@ int main_basis_sim(args::Subparser &parser)
   } else {
     nRetain = (cumsum < thresh.Get()).count();
   }
-  log.info("Retaining {} basis vectors, cumulative energy: {}\n",
-           nRetain,
-           cumsum.head(nRetain).transpose());
+  log.info(
+      "Retaining {} basis vectors, cumulative energy: {}",
+      nRetain,
+      cumsum.head(nRetain).transpose());
   float const flip = (svd.matrixV().leftCols(1)(0) < 0) ? -1.f : 1.f;
   Eigen::MatrixXf const basisMat = flip * svd.matrixV().leftCols(nRetain) * std::sqrt(nT);
   log.info("Computing dictionary");
