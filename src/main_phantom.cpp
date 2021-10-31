@@ -12,7 +12,7 @@
 #include "sense.h"
 #include "tensorOps.h"
 #include "threads.h"
-#include "traj_archimedean.h"
+#include "traj_spirals.h"
 #include "types.h"
 #include <filesystem>
 
@@ -51,6 +51,10 @@ int main_phantom(args::Subparser &parser)
   args::ValueFlag<float> intensity(
       parser, "INTENSITY", "Phantom intensity (default 1000)", {'i', "intensity"}, 1000.f);
   args::ValueFlag<float> snr(parser, "SNR", "Add noise (specified as SNR)", {'n', "snr"}, 0);
+  args::Flag phyllo(parser, "P", "Use a phyllotaxis", {'p', "phyllo"});
+  args::ValueFlag<long> smoothness(parser, "S", "Phyllotaxis smoothness", {"smoothness"}, 10);
+  args::ValueFlag<long> spokes_per_interleave(
+      parser, "N", "Phyllotaxis spokes per interleave", {"spi"}, 512);
   args::ValueFlag<std::string> trajfile(
       parser, "TRAJ FILE", "Input HD5 file for trajectory", {"traj"});
   args::ValueFlag<std::string> infofile(parser, "INFO FILE", "Input HD5 file for info", {"info"});
@@ -73,22 +77,25 @@ int main_phantom(args::Subparser &parser)
     info.spokes_lo = 0;
   } else {
     auto const spokes_hi = std::lrint(matrix.Get() * matrix.Get() / spoke_samp.Get());
-    info = Info{
-        .type = Info::Type::ThreeD,
-        .channels = nchan.Get(),
-        .matrix = Eigen::Array3l::Constant(matrix.Get()),
-        .read_points = (long)read_samp.Get() * matrix.Get() / 2,
-        .read_gap = 0,
-        .spokes_hi = spokes_hi,
-        .spokes_lo = 0,
-        .lo_scale = lores ? lores.Get() : 1.f,
-        .volumes = 1,
-        .echoes = 1,
-        .tr = 1.f,
-        .voxel_size = Eigen::Array3f::Constant(fov.Get() / matrix.Get()),
-        .origin = Eigen::Array3f::Constant(-fov.Get() / 2.f),
-        .direction = Eigen::Matrix3f::Identity()};
-    points = ArchimedeanSpiral(info);
+    info = Info{.type = Info::Type::ThreeD,
+                .channels = nchan.Get(),
+                .matrix = Eigen::Array3l::Constant(matrix.Get()),
+                .read_points = (long)read_samp.Get() * matrix.Get() / 2,
+                .read_gap = 0,
+                .spokes_hi = spokes_hi,
+                .spokes_lo = 0,
+                .lo_scale = lores ? lores.Get() : 1.f,
+                .volumes = 1,
+                .echoes = 1,
+                .tr = 1.f,
+                .voxel_size = Eigen::Array3f::Constant(fov.Get() / matrix.Get()),
+                .origin = Eigen::Array3f::Constant(-fov.Get() / 2.f),
+                .direction = Eigen::Matrix3f::Identity()};
+    if (phyllo) {
+      points = Phyllotaxis(info, smoothness.Get(), spokes_per_interleave.Get());
+    } else {
+      points = ArchimedeanSpiral(info);
+    }
     use_lores = lores;
   }
   log.info(
@@ -158,21 +165,20 @@ int main_phantom(args::Subparser &parser)
       // GridOp does funky stuff to merge k-spaces. Sample lo-res as if it was hi-res
       lowres_scale = lores.Get();
       auto const spokes_lo = info.spokes_hi / lowres_scale;
-      lo_info = Info{
-          .type = Info::Type::ThreeD,
-          .channels = info.channels,
-          .matrix = info.matrix,
-          .read_points = info.read_points,
-          .read_gap = 0,
-          .spokes_hi = spokes_lo,
-          .spokes_lo = 0,
-          .lo_scale = 1.f,
-          .volumes = 1,
-          .echoes = 1,
-          .tr = 1.f,
-          .voxel_size = info.voxel_size,
-          .origin = info.origin,
-          .direction = Eigen::Matrix3f::Identity()};
+      lo_info = Info{.type = Info::Type::ThreeD,
+                     .channels = info.channels,
+                     .matrix = info.matrix,
+                     .read_points = info.read_points,
+                     .read_gap = 0,
+                     .spokes_hi = spokes_lo,
+                     .spokes_lo = 0,
+                     .lo_scale = 1.f,
+                     .volumes = 1,
+                     .echoes = 1,
+                     .tr = 1.f,
+                     .voxel_size = info.voxel_size,
+                     .origin = info.origin,
+                     .direction = Eigen::Matrix3f::Identity()};
       lo_points = ArchimedeanSpiral(lo_info);
     }
     Trajectory lo_traj(
