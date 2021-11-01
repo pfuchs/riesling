@@ -5,8 +5,7 @@
 #include "io_hd5.h"
 #include "io_nifti.h"
 #include "log.h"
-#include "op/grid-basis.h"
-#include "op/sense.h"
+#include "op/recon-basis.h"
 #include "parse_args.h"
 #include "phantom_shepplogan.h"
 #include "phantom_sphere.h"
@@ -122,12 +121,7 @@ int main_basis_phantom(args::Subparser &parser)
   log.info(FMT_STRING("Hi-res spokes: {}"), info.spokes_hi);
 
   Trajectory traj(info, points, log);
-  auto hi_gridder = make_grid_basis(traj, osamp.Get(), kb, false, basis, log);
-  auto const gridDims = hi_gridder->gridDims();
-  Cx5 grid(info.channels, nB, gridDims[0], gridDims[1], gridDims[2]);
-  FFT::ThreeDBasis fft(grid, log); // FFTW needs temp space for planning
-
-  Cx4 sense_maps = sense ? InterpSENSE(sense.Get(), info.matrix, log)
+  Cx4 senseMaps = sense ? InterpSENSE(sense.Get(), info.matrix, log)
                          : birdcage(
                                info.matrix,
                                info.voxel_size,
@@ -136,12 +130,10 @@ int main_basis_phantom(args::Subparser &parser)
                                coil_r.Get(),
                                coil_r.Get(),
                                log);
-  info.channels = sense_maps.dimension(0); // InterpSENSE may have changed this
-  SenseBasisOp senseOp(sense_maps, grid.dimensions());
-
-  Cropper cropper(hi_gridder->gridDims(), info.matrix, log);
-  R3 const apo = hi_gridder->apodization(cropper.size());
-  Cx4 phan(nB, apo.dimension(0), apo.dimension(1), apo.dimension(2));
+  info.channels = senseMaps.dimension(0); // InterpSENSE may have changed this
+  ReconBasisOp recon(traj, osamp.Get(), kb, fastgrid, "none", senseMaps, basis, log);
+  auto const sz = recon.dimensions();
+  Cx4 phan(nB, sz[0], sz[1], sz[2]);
 
   for (long ii = 0; ii < nB; ii++) {
     phan.chip(ii, 0) =
@@ -157,20 +149,10 @@ int main_basis_phantom(args::Subparser &parser)
             : SphericalPhantom(
                   info.matrix, info.voxel_size, phan_c.Get(), phan_r.Get(), intensities[ii], log);
   }
-  phan = phan / apo.cast<Cx>();
-
-  log.info("Generating Cartesian k-space...");
-  grid.setZero();
-  senseOp.A(phan, grid);
-  Cx4 temp = grid.reshape(Sz4{nB * info.channels, grid.dimension(2), grid.dimension(3), grid.dimension(4)});
-  log.image(temp, "grid.nii");
-  fft.forward(grid);
-  temp = grid.reshape(Sz4{nB * info.channels, grid.dimension(2), grid.dimension(3), grid.dimension(4)});
-  log.image(temp, "grid-fft.nii");
 
   log.info("Sampling hi-res non-cartesian");
   Cx3 radial = info.noncartesianVolume();
-  hi_gridder->A(grid, radial);
+  recon.A(phan, radial);
 
   if (use_lores) {
     Info lo_info;
@@ -211,9 +193,9 @@ int main_basis_phantom(args::Subparser &parser)
         lo_info,
         R3(lo_points / lo_points.constant(lowres_scale)), // Points need to be scaled down here
         log);
-    auto lo_gridder = make_grid_basis(lo_traj, osamp.Get(), kb, false, basis, log);
+    ReconBasisOp lo_recon(lo_traj, osamp.Get(), kb, fastgrid, "none", senseMaps, basis, log);
     Cx3 lo_radial = lo_info.noncartesianVolume();
-    lo_gridder->A(grid, lo_radial);
+    lo_recon.A(phan, lo_radial);
     // Combine
     Cx3 const all_radial = lo_radial.concatenate(radial, 2);
     radial = all_radial;
