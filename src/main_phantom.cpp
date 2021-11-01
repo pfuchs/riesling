@@ -21,9 +21,9 @@ int main_phantom(args::Subparser &parser)
   args::Positional<std::string> iname(parser, "FILE", "Filename to write phantom data to");
   args::ValueFlag<std::string> suffix(
       parser, "SUFFIX", "Add suffix (well, infix) to output dirs", {"suffix"});
-  args::ValueFlag<float> grid_samp(
-      parser, "SRATE", "Oversampling factor for gridding, default 2", {'g', "grid"}, 2.f);
-  args::ValueFlag<float> fov(
+  args::ValueFlag<float> osamp(parser, "OSAMP", "Grid oversampling factor (2)", {'s', "os"}, 2.f);
+  args::Flag kb(parser, "KB", "Use Kaiser-Bessel interpolation", {"kb"});
+args::ValueFlag<float> fov(
       parser, "FOV", "Field of View in mm (default 256)", {'f', "fov"}, 240.f);
   args::ValueFlag<long> matrix(parser, "MATRIX", "Matrix size (default 128)", {'m', "matrix"}, 128);
   args::Flag shepplogan(parser, "SHEPP-LOGAN", "3D Shepp-Logan phantom", {"shepp_logan"});
@@ -58,7 +58,6 @@ int main_phantom(args::Subparser &parser)
   args::ValueFlag<std::string> trajfile(
       parser, "TRAJ FILE", "Input HD5 file for trajectory", {"traj"});
   args::ValueFlag<std::string> infofile(parser, "INFO FILE", "Input HD5 file for info", {"info"});
-  args::Flag kb(parser, "KAISER-BESSEL", "Use Kaiser-Bessel kernel", {'k', "kb"});
 
   Log log = ParseCommand(parser, iname);
   FFT::Start(log);
@@ -116,7 +115,7 @@ int main_phantom(args::Subparser &parser)
   info.channels = sense_maps.dimension(0); // InterpSENSE may have changed this
 
   Trajectory traj(info, points, log);
-  auto hi_gridder = make_grid(traj, grid_samp.Get(), kb, false, log);
+  auto hi_gridder = make_grid(traj, osamp.Get(), kb, false, log);
   Cx4 grid = hi_gridder->newMultichannel(info.channels);
   FFT::ThreeDMulti fft(grid, log); // FFTW needs temp space for planning
 
@@ -185,7 +184,7 @@ int main_phantom(args::Subparser &parser)
         lo_info,
         R3(lo_points / lo_points.constant(lowres_scale)), // Points need to be scaled down here
         log);
-    auto lo_gridder = make_grid(lo_traj, grid_samp.Get(), kb, false, log);
+    auto lo_gridder = make_grid(lo_traj, osamp.Get(), kb, false, log);
     Cx3 lo_radial = lo_info.noncartesianVolume();
     lo_gridder->A(grid, lo_radial);
     // Combine

@@ -24,8 +24,10 @@ int main_basis_phantom(args::Subparser &parser)
 
   args::ValueFlag<std::string> suffix(
       parser, "SUFFIX", "Add suffix (well, infix) to output dirs", {"suffix"});
-  args::ValueFlag<float> grid_samp(
-      parser, "SRATE", "Oversampling factor for gridding, default 2", {'g', "grid"}, 2.f);
+  args::ValueFlag<float> osamp(parser, "OSAMP", "Grid oversampling factor (2)", {'s', "os"}, 2.f);
+  args::Flag kb(parser, "KB", "Use Kaiser-Bessel interpolation", {"kb"});
+  args::Flag fastgrid(
+      parser, "FAST", "Enable fast but thread-unsafe gridding", {"fast-grid", 'f'});
   args::ValueFlag<float> fov(
       parser, "FOV", "Field of View in mm (default 256)", {'f', "fov"}, 240.f);
   args::ValueFlag<long> matrix(parser, "MATRIX", "Matrix size (default 128)", {'m', "matrix"}, 128);
@@ -61,7 +63,6 @@ int main_basis_phantom(args::Subparser &parser)
   args::ValueFlag<std::string> trajfile(
       parser, "TRAJ FILE", "Input HD5 file for trajectory", {"traj"});
   args::ValueFlag<std::string> infofile(parser, "INFO FILE", "Input HD5 file for info", {"info"});
-  args::Flag kb(parser, "KAISER-BESSEL", "Use Kaiser-Bessel kernel", {'k', "kb"});
 
   Log log = ParseCommand(parser, iname);
   FFT::Start(log);
@@ -71,11 +72,11 @@ int main_basis_phantom(args::Subparser &parser)
   long const nB = basis.dimension(1);
 
   std::vector<float> intensities = intFlag.Get();
-  if (intensities.size() == 0) {
+  if ((long)intensities.size() == 0) {
     intensities.resize(nB);
     std::fill(intensities.begin(), intensities.end(), 100.f);
   }
-  if (intensities.size() != nB) {
+  if ((long)intensities.size() != nB) {
     Log::Fail("Number of intensities {} does not match basis size {}", intensities.size(), nB);
   }
 
@@ -121,7 +122,7 @@ int main_basis_phantom(args::Subparser &parser)
   log.info(FMT_STRING("Hi-res spokes: {}"), info.spokes_hi);
 
   Trajectory traj(info, points, log);
-  auto hi_gridder = make_grid_basis(traj, grid_samp.Get(), kb, false, basis, log);
+  auto hi_gridder = make_grid_basis(traj, osamp.Get(), kb, false, basis, log);
   auto const gridDims = hi_gridder->gridDims();
   Cx5 grid(info.channels, nB, gridDims[0], gridDims[1], gridDims[2]);
   FFT::ThreeDBasis fft(grid, log); // FFTW needs temp space for planning
@@ -161,9 +162,11 @@ int main_basis_phantom(args::Subparser &parser)
   log.info("Generating Cartesian k-space...");
   grid.setZero();
   senseOp.A(phan, grid);
-  log.image(grid, "grid.nii");
+  Cx4 temp = grid.reshape(Sz4{nB * info.channels, grid.dimension(2), grid.dimension(3), grid.dimension(4)});
+  log.image(temp, "grid.nii");
   fft.forward(grid);
-  log.image(grid, "grid-fft.nii");
+  temp = grid.reshape(Sz4{nB * info.channels, grid.dimension(2), grid.dimension(3), grid.dimension(4)});
+  log.image(temp, "grid-fft.nii");
 
   log.info("Sampling hi-res non-cartesian");
   Cx3 radial = info.noncartesianVolume();
@@ -208,7 +211,7 @@ int main_basis_phantom(args::Subparser &parser)
         lo_info,
         R3(lo_points / lo_points.constant(lowres_scale)), // Points need to be scaled down here
         log);
-    auto lo_gridder = make_grid_basis(lo_traj, grid_samp.Get(), kb, false, basis, log);
+    auto lo_gridder = make_grid_basis(lo_traj, osamp.Get(), kb, false, basis, log);
     Cx3 lo_radial = lo_info.noncartesianVolume();
     lo_gridder->A(grid, lo_radial);
     // Combine
