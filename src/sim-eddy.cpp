@@ -6,29 +6,31 @@
 namespace Sim {
 
 Result Eddy(
-  Parameter const T1p,
-  Parameter const betap,
-  Parameter const gammap,
-  Parameter const B1p,
-  Sequence const seq,
-  Log &log)
+    Parameter const T1p,
+    Parameter const betap,
+    Parameter const gammap,
+    Parameter const B1p,
+    Sequence const seq,
+    Log &log)
 {
   log.info("Eddy Current MP-ZTE simulation");
   log.info(
-    FMT_STRING("SPS {}, FA {}, TR {}s, TI {}s, Trec {}s"),
-    seq.sps,
-    seq.alpha,
-    seq.TR,
-    seq.TI,
-    seq.Trec);
+      FMT_STRING("SPS {}, FA {}, TR {}s, TI {}s, Trec {}s"),
+      seq.sps,
+      seq.alpha,
+      seq.TR,
+      seq.TI,
+      seq.Trec);
   log.info(FMT_STRING("{} values of T1 from {} to {}s"), T1p.N, T1p.lo, T1p.hi);
   log.info(FMT_STRING("{} values of β from {} to {}"), betap.N, betap.lo, betap.hi);
   log.info(FMT_STRING("{} values of ɣ from {} to {}"), gammap.N, gammap.lo, gammap.hi);
   log.info(FMT_STRING("{} values of B1 from {} to {}"), B1p.N, B1p.lo, B1p.hi);
   ParameterGenerator<4> gen({T1p, betap, gammap, B1p});
   long const totalN = gen.totalN();
-  Eigen::MatrixXf sims(totalN, 4 * seq.sps); // SVD expects observations in rows
-  Eigen::MatrixXf parameters(totalN, 5);
+  Result result;
+  result.dynamics.resize(4 * seq.sps, totalN);
+  result.parameters.resize(4, totalN);
+  result.Mz_ss.resize(totalN);
 
   auto task = [&](long const lo, long const hi, long const ti) {
     for (long ip = lo; ip < hi; ip++) {
@@ -67,50 +69,46 @@ Result Eddy(
 
       // Get steady state after prep-pulse for first segment
       Eigen::Matrix2f const seg = B * Er * (E1 * A).pow(seq.sps);
-      Eigen::Matrix2f const SS =
-          Ei * PC0 * seg * Ei * PC3 * seg * Ei * PC2 * seg * Ei * PC1 * seg;
-      float const Mz_ss = SS(0, 1) / (1.f - SS(0, 0));
+      Eigen::Matrix2f const SS = Ei * PC0 * seg * Ei * PC3 * seg * Ei * PC2 * seg * Ei * PC1 * seg;
+      float const m_ss = SS(0, 1) / (1.f - SS(0, 0));
 
       // Now fill in dynamic
-      long col = 0;
-      Eigen::Vector2f Mz{Mz_ss, 1.f};
+      long row = 0;
+      Eigen::Vector2f Mz{m_ss, 1.f};
       for (long ii = 0; ii < seq.sps; ii++) {
-          sims(ip, col++) = Mz(0) * sina;
-          Mz = A * Mz;
-          Mz = E1 * Mz;
+        result.dynamics(row++, ip) = Mz(0) * sina;
+        Mz = A * Mz;
+        Mz = E1 * Mz;
       }
       Mz = Ei * PC1 * B * Er * Mz;
       for (long ii = 0; ii < seq.sps; ii++) {
-          sims(ip, col++) = Mz(0) * sina;
-          Mz = A * Mz;
-          Mz = E1 * Mz;
+        result.dynamics(row++, ip) = Mz(0) * sina;
+        Mz = A * Mz;
+        Mz = E1 * Mz;
       }
       Mz = Ei * PC2 * B * Er * Mz;
       for (long ii = 0; ii < seq.sps; ii++) {
-          sims(ip, col++) = Mz(0) * sina;
-          Mz = A * Mz;
-          Mz = E1 * Mz;
+        result.dynamics(row++, ip) = Mz(0) * sina;
+        Mz = A * Mz;
+        Mz = E1 * Mz;
       }
       Mz = Ei * PC3 * B * Er * Mz;
       for (long ii = 0; ii < seq.sps; ii++) {
-          sims(ip, col++) = Mz(0) * sina;
-          Mz = A * Mz;
-          Mz = E1 * Mz;
+        result.dynamics(row++, ip) = Mz(0) * sina;
+        Mz = A * Mz;
+        Mz = E1 * Mz;
       }
-      if (col != (4 * seq.sps)) {
-          Log::Fail("Programmer error");
+      if (row != (4 * seq.sps)) {
+        Log::Fail("Programmer error");
       }
-      parameters(ip, 0) = Mz_ss;
-      parameters(ip, 1) = T1;
-      parameters(ip, 2) = beta;
-      parameters(ip, 3) = gamma;
-      parameters(ip, 4) = B1;
+      result.Mz_ss(ip) = m_ss;
+      result.parameters.col(ip) = P;
     }
   };
   auto const start = log.now();
   Threads::RangeFor(task, totalN);
   log.info("Simulation took {}", log.toNow(start));
-  return {sims, parameters};
+  return result;
 }
 
 } // namespace Sim

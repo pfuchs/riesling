@@ -26,8 +26,10 @@ Result MUPA(
   log.info(FMT_STRING("{} values of B1 from {} to {}"), B1p.N, B1p.lo, B1p.hi);
   ParameterGenerator<3> gen({T1p, T2p, B1p});
   long totalN = (nRand > 0) ? nRand : gen.totalN();
-  Eigen::MatrixXf sims(totalN, 4 * seq.sps); // SVD expects observations in rows
-  Eigen::MatrixXf parameters(totalN, 4);
+  Result result;
+  result.dynamics.resize(4 * seq.sps, totalN);
+  result.parameters.resize(3, totalN);
+  result.Mz_ss.resize(totalN);
 
   Eigen::Matrix2f inv;
   inv << -1.f, 0.f, 0.f, 1.f;
@@ -63,38 +65,36 @@ Result MUPA(
       // Get steady state after prep-pulse for first segment
       Eigen::Matrix2f const seg = Essi * Eramp * (E1 * A).pow(seq.sps) * Eramp;
       Eigen::Matrix2f const SS = Eramp * Essi * E2 * seg * seg * seg * Ei * inv * Essi * seg;
-      float const Mz_ss = SS(0, 1) / (1.f - SS(0, 0));
+      float const m_ss = SS(0, 1) / (1.f - SS(0, 0));
 
       // Now fill in dynamic
-      long col = 0;
-      Eigen::Vector2f Mz{Mz_ss, 1.f};
+      long tp = 0;
+      Eigen::Vector2f Mz{m_ss, 1.f};
       for (long ii = 0; ii < seq.sps; ii++) {
-        sims(ip, col++) = Mz(0) * sina;
+        result.dynamics(tp++, ip) = Mz(0) * sina;
         Mz = A * Mz;
         Mz = E1 * Mz;
       }
       Mz = Eramp * Ei * inv * Essi * Eramp * Mz;
       for (long is = 0; is < 3; is++) {
         for (long ii = 0; ii < seq.sps; ii++) {
-          sims(ip, col++) = Mz(0) * sina;
+          result.dynamics(tp++, ip) = Mz(0) * sina;
           Mz = A * Mz;
           Mz = E1 * Mz;
         }
         Mz = Eramp * Essi * Eramp * Mz;
       }
-      if (col != (4 * seq.sps)) {
+      if (tp != (4 * seq.sps)) {
         Log::Fail("Programmer error");
       }
-      parameters(ip, 0) = Mz_ss;
-      parameters(ip, 1) = T1;
-      parameters(ip, 2) = T2;
-      parameters(ip, 3) = B1;
+      result.Mz_ss(ip) = m_ss;
+      result.parameters.col(ip) = P;
     }
   };
   auto const start = log.now();
   Threads::RangeFor(task, totalN);
   log.info("Simulation took {}", log.toNow(start));
-  return {sims, parameters};
+  return result;
 }
 
 } // namespace Sim

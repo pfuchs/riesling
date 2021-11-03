@@ -8,8 +8,9 @@ namespace Sim {
 // A simple struct for returning multiple things from a simulation without tuple
 struct Result
 {
-  Eigen::MatrixXf dynamics;
-  Eigen::MatrixXf parameters;
+  Eigen::ArrayXXf dynamics;
+  Eigen::ArrayXXf parameters;
+  Eigen::ArrayXf Mz_ss;
 };
 
 // Another simple struct for passing around the main ZTE sequence parameters

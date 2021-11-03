@@ -67,24 +67,26 @@ int main_basis_sim(args::Subparser &parser)
   Sim::Parameter const T1{nT1.Get(), T1Lo.Get(), T1Hi.Get(), true};
   Sim::Parameter const beta{nb.Get(), bLo.Get(), bHi.Get(), bLog};
   Sim::Parameter const B1{nB1.Get(), B1Lo.Get(), B1Hi.Get(), false};
-  Sim::Result results;
+  Sim::Result result;
   if (ng) {
     Sim::Parameter const gamma{ng.Get(), gLo.Get(), gHi.Get(), false};
-    results = Sim::Eddy(T1, beta, gamma, B1, seq, log);
+    result = Sim::Eddy(T1, beta, gamma, B1, seq, log);
   } else if (mupa) {
     Sim::Parameter const T2{65, 0.02, 0.2, true};
-    results = Sim::MUPA(T1, T2, B1, seq, randomSamp.Get(), log);
+    result = Sim::MUPA(T1, T2, B1, seq, randomSamp.Get(), log);
   } else {
-    results = Sim::Simple(T1, beta, B1, seq, log);
+    result = Sim::Simple(T1, beta, B1, seq, log);
   }
-  long const nT = results.dynamics.cols(); // Number of timepoints in sim
+  long const nT = result.dynamics.cols(); // Number of timepoints in sim
 
-  // Calculate SVD
-  log.info(
-      "Calculating SVD {}x{}", results.dynamics.rows() / subsamp.Get(), results.dynamics.cols());
-  auto const svd = subsamp ? results.dynamics(Eigen::seq(0, Eigen::last, subsamp.Get()), Eigen::all)
-                                 .bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV)
-                           : results.dynamics.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
+  // Calculate SVD - observations are in rows hence transpose
+  log.info("Calculating SVD {}x{}", result.dynamics.cols() / subsamp.Get(), result.dynamics.rows());
+  auto const svd =
+      subsamp
+          ? result.dynamics.matrix()
+                .transpose()(Eigen::seq(0, Eigen::last, subsamp.Get()), Eigen::all)
+                .bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV)
+          : result.dynamics.matrix().transpose().bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
   Eigen::ArrayXf const vals = svd.singularValues().array().square();
   Eigen::ArrayXf cumsum(vals.rows());
   std::partial_sum(vals.begin(), vals.end(), cumsum.begin());
@@ -106,20 +108,22 @@ int main_basis_sim(args::Subparser &parser)
   Eigen::MatrixXf const basisMat =
       svd.matrixV().leftCols(nRetain).array().rowwise() * flip.transpose();
   log.info("Computing dictionary");
-  Eigen::ArrayXXf Dk = basisMat.adjoint() * results.dynamics.transpose();
+  Eigen::ArrayXXf Dk = basisMat.adjoint() * result.dynamics.matrix();
   Dk = Dk.colwise() / Dk.rowwise().norm();
 
   Eigen::TensorMap<R2 const> dynamics(
-      results.dynamics.data(), results.dynamics.rows(), results.dynamics.cols());
+      result.dynamics.data(), result.dynamics.rows(), result.dynamics.cols());
   Eigen::TensorMap<R2 const> basis(basisMat.data(), basisMat.rows(), basisMat.cols());
   Eigen::TensorMap<R2 const> dictionary(Dk.data(), Dk.rows(), Dk.cols());
   Eigen::TensorMap<R2 const> parameters(
-      results.parameters.data(), results.parameters.rows(), results.parameters.cols());
+      result.parameters.data(), result.parameters.rows(), result.parameters.cols());
+  Eigen::TensorMap<R2 const> Mz_ss(result.Mz_ss.data(), result.Mz_ss.rows(), result.Mz_ss.cols());
 
   HD5::Writer writer(oname.Get(), log);
   writer.writeBasis(R2(basis));
   writer.writeDynamics(R2(dynamics));
   writer.writeRealMatrix(R2(dictionary), "dictionary");
   writer.writeRealMatrix(R2(parameters), "parameters");
+  writer.writeRealMatrix(R2(Mz_ss), "Mz_ss");
   return EXIT_SUCCESS;
 }
