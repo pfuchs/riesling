@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types.h"
 #include "log.h"
+#include "types.h"
 
 namespace Sim {
 
@@ -33,16 +33,18 @@ private:
   float logspace(long const i) const;
 };
 
-template<int NP>
+template <int NP>
 struct ParameterGenerator
 {
   using Parameters = Eigen::Array<float, NP, 1>;
 
-  ParameterGenerator(std::array<Parameter, NP> const &p) :
-    pars{p}
-  {}
+  ParameterGenerator(std::array<Parameter, NP> const &p)
+      : pars{p}
+  {
+  }
 
-  long totalN() const {
+  long totalN() const
+  {
     long total = 1;
     for (auto const &par : pars) {
       total *= par.N;
@@ -50,23 +52,26 @@ struct ParameterGenerator
     return total;
   }
 
-  Parameters values(long const ii) {
+  Parameters values(long const ii)
+  {
     assert(ii < totalN());
     Parameters p;
-    long remaining = ii;
+    long next = ii;
     for (long ip = 0; ip < NP; ip++) {
-      long const parN = remaining % pars[ip].N;
-      remaining /= pars[ip].N;
-      p(ip) = pars[ip].value(parN);
+      auto result = std::div(next, pars[ip].N);
+      p(ip) = pars[ip].value(result.rem);
+      next = result.quot;
     }
     return p;
   }
 
-  Parameters rand() const {
+  Parameters rand() const
+  {
     Parameters p;
+    // Eigen random range is -1 to 1, scale appropriately
     p.setRandom();
     for (long ip = 0; ip < NP; ip++) {
-      p(ip) = pars[ip].lo + p(ip) * (pars[ip].hi - pars[ip].lo);
+      p(ip) = pars[ip].lo + (p(ip) + 1.f) * (pars[ip].hi - pars[ip].lo) / 2.f;
     }
     return p;
   }
@@ -75,4 +80,4 @@ private:
   std::array<Parameter, NP> pars;
 };
 
-}
+} // namespace Sim
