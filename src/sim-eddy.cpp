@@ -28,8 +28,8 @@ Result Eddy(
   ParameterGenerator<4> gen({T1p, betap, gammap, B1p});
   long const totalN = gen.totalN();
   Result result;
-  result.dynamics.resize(4 * seq.sps, totalN);
-  result.parameters.resize(4, totalN);
+  result.dynamics.resize(totalN, 4 * seq.sps);
+  result.parameters.resize(totalN, 4);
   result.Mz_ss.resize(totalN);
 
   auto task = [&](long const lo, long const hi, long const ti) {
@@ -73,36 +73,36 @@ Result Eddy(
       float const m_ss = SS(0, 1) / (1.f - SS(0, 0));
 
       // Now fill in dynamic
-      long row = 0;
+      long col = 0;
       Eigen::Vector2f Mz{m_ss, 1.f};
       for (long ii = 0; ii < seq.sps; ii++) {
-        result.dynamics(row++, ip) = Mz(0) * sina;
+        result.dynamics(ip, col++) = Mz(0) * sina;
         Mz = A * Mz;
         Mz = E1 * Mz;
       }
       Mz = Ei * PC1 * B * Er * Mz;
       for (long ii = 0; ii < seq.sps; ii++) {
-        result.dynamics(row++, ip) = Mz(0) * sina;
+        result.dynamics(ip, col++) = Mz(0) * sina;
         Mz = A * Mz;
         Mz = E1 * Mz;
       }
       Mz = Ei * PC2 * B * Er * Mz;
       for (long ii = 0; ii < seq.sps; ii++) {
-        result.dynamics(row++, ip) = Mz(0) * sina;
+        result.dynamics(ip, col++) = Mz(0) * sina;
         Mz = A * Mz;
         Mz = E1 * Mz;
       }
       Mz = Ei * PC3 * B * Er * Mz;
       for (long ii = 0; ii < seq.sps; ii++) {
-        result.dynamics(row++, ip) = Mz(0) * sina;
+        result.dynamics(ip, col++) = Mz(0) * sina;
         Mz = A * Mz;
         Mz = E1 * Mz;
       }
-      if (row != (4 * seq.sps)) {
+      if (col != (4 * seq.sps)) {
         Log::Fail("Programmer error");
       }
       result.Mz_ss(ip) = m_ss;
-      result.parameters.col(ip) = P;
+      result.parameters.row(ip) = P;
     }
   };
   auto const start = log.now();

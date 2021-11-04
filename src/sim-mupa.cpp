@@ -27,8 +27,8 @@ Result MUPA(
   ParameterGenerator<3> gen({T1p, T2p, B1p});
   long totalN = (nRand > 0) ? nRand : gen.totalN();
   Result result;
-  result.dynamics.resize(4 * seq.sps, totalN);
-  result.parameters.resize(3, totalN);
+  result.dynamics.resize(totalN, 4 * seq.sps);
+  result.parameters.resize(totalN, 3);
   result.Mz_ss.resize(totalN);
 
   Eigen::Matrix2f inv;
@@ -71,14 +71,14 @@ Result MUPA(
       long tp = 0;
       Eigen::Vector2f Mz{m_ss, 1.f};
       for (long ii = 0; ii < seq.sps; ii++) {
-        result.dynamics(tp++, ip) = Mz(0) * sina;
+        result.dynamics(ip, tp++) = Mz(0) * sina;
         Mz = A * Mz;
         Mz = E1 * Mz;
       }
       Mz = Eramp * Ei * inv * Essi * Eramp * Mz;
       for (long is = 0; is < 3; is++) {
         for (long ii = 0; ii < seq.sps; ii++) {
-          result.dynamics(tp++, ip) = Mz(0) * sina;
+          result.dynamics(ip, tp++) = Mz(0) * sina;
           Mz = A * Mz;
           Mz = E1 * Mz;
         }
@@ -88,7 +88,7 @@ Result MUPA(
         Log::Fail("Programmer error");
       }
       result.Mz_ss(ip) = m_ss;
-      result.parameters.col(ip) = P;
+      result.parameters.row(ip) = P;
     }
   };
   auto const start = log.now();

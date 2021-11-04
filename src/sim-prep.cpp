@@ -22,8 +22,8 @@ Result Simple(
   ParameterGenerator<3> gen({T1p, betap, B1p});
   long const totalN = gen.totalN();
   Result result;
-  result.dynamics.resize(seq.sps, totalN);
-  result.parameters.resize(3, totalN);
+  result.dynamics.resize(totalN, seq.sps);
+  result.parameters.resize(totalN, 3);
   result.Mz_ss.resize(totalN);
 
   auto task = [&](long const lo, long const hi, long const ti) {
@@ -59,12 +59,12 @@ Result Simple(
       // Now fill in dynamic
       Eigen::Vector2f Mz{m_ss, 1.f};
       for (long ii = 0; ii < seq.sps; ii++) {
-        result.dynamics(ii, ip) = Mz(0) * sina;
+        result.dynamics(ip, ii) = Mz(0) * sina;
         Mz = A * Mz;
         Mz = E1 * Mz;
       }
       result.Mz_ss(ip) = m_ss;
-      result.parameters.col(ip) = P;
+      result.parameters.row(ip) = P;
     }
   };
   auto const start = log.now();

@@ -77,16 +77,16 @@ int main_basis_sim(args::Subparser &parser)
   } else {
     result = Sim::Simple(T1, beta, B1, seq, log);
   }
-  long const nT = result.dynamics.cols(); // Number of timepoints in sim
 
-  // Calculate SVD - observations are in rows hence transpose
+  // Normalize dictionary
+  result.dynamics.rowwise().normalize();
+  // Calculate SVD - observations are in rows
   log.info("Calculating SVD {}x{}", result.dynamics.cols() / subsamp.Get(), result.dynamics.rows());
-  auto const svd =
-      subsamp
-          ? result.dynamics.matrix()
-                .transpose()(Eigen::seq(0, Eigen::last, subsamp.Get()), Eigen::all)
-                .bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV)
-          : result.dynamics.matrix().transpose().bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
+  auto const svd = subsamp
+                       ? result.dynamics(Eigen::seq(0, Eigen::last, subsamp.Get()), Eigen::all)
+                             .matrix()
+                             .bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV)
+                       : result.dynamics.matrix().bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
   Eigen::ArrayXf const vals = svd.singularValues().array().square();
   Eigen::ArrayXf cumsum(vals.rows());
   std::partial_sum(vals.begin(), vals.end(), cumsum.begin());
@@ -102,14 +102,12 @@ int main_basis_sim(args::Subparser &parser)
       nRetain,
       cumsum.head(nRetain).transpose());
   // Scale and flip the basis vectors to always have a positive first element for stability
-  Eigen::ArrayXf flip(nRetain);
-  flip.setConstant(std::sqrt(nT));
+  Eigen::ArrayXf flip = Eigen::ArrayXf::Ones(nRetain);
   flip = (svd.matrixV().leftCols(nRetain).row(0).transpose().array() < 0.f).select(-flip, flip);
   Eigen::MatrixXf const basisMat =
       svd.matrixV().leftCols(nRetain).array().rowwise() * flip.transpose();
   log.info("Computing dictionary");
-  Eigen::ArrayXXf Dk = basisMat.adjoint() * result.dynamics.matrix();
-  Dk = Dk.colwise() / Dk.rowwise().norm();
+  Eigen::ArrayXXf Dk = result.dynamics.matrix() * basisMat;
 
   Eigen::TensorMap<R2 const> dynamics(
       result.dynamics.data(), result.dynamics.rows(), result.dynamics.cols());
