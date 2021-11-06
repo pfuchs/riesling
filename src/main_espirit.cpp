@@ -4,8 +4,7 @@
 #include "espirit.h"
 #include "fft_plan.h"
 #include "filter.h"
-#include "io_hd5.h"
-#include "io_nifti.h"
+#include "io.h"
 #include "log.h"
 #include "op/grid.h"
 #include "parse_args.h"
@@ -41,7 +40,7 @@ int main_espirit(args::Subparser &parser)
   Cropper cropper(info, gridder->gridDims(), fov.Get(), log);
   Cx4 sense = cropper.crop4(ESPIRIT(
     gridder,
-    reader.noncartesian(LastOrVal(volume, info.volumes)),
+    reader.noncartesian(ValOrLast(volume.Get(), info.volumes)),
     kRad.Get(),
     totalCalRad,
     info.read_gap,

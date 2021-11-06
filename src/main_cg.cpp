@@ -28,21 +28,11 @@ int main_cg(args::Subparser &parser)
   Trajectory const traj = reader.readTrajectory();
   Info const &info = traj.info();
 
-  Cx4 senseMaps = SENSE(senseFile.Get(), LastOrVal) if (senseFile)
-  {
-    senseMaps = LoadSENSE(senseFile.Get(), log);
-  }
-  else
-  {
-    senseMaps = DirectSENSE(
-      traj,
-      osamp.Get(),
-      kb,
-      iter_fov.Get(),
-      reader.noncartesian(LastOrVal(senseVolume, info.volumes)),
-      senseLambda.Get(),
-      log);
-  }
+  Cx4 senseMaps =
+    senseFile
+      ? LoadSENSE(senseFile.Get(), log)
+      : DirectSENSE(
+          traj, osamp.Get(), kb, iter_fov.Get(), senseLambda.Get(), senseVol.Get(), reader, log);
 
   ReconOp recon(traj, osamp.Get(), kb, fastgrid, sdc.Get(), senseMaps, log);
   recon.setPreconditioning(sdc_exp.Get());
@@ -54,7 +44,7 @@ int main_cg(args::Subparser &parser)
   auto const &all_start = log.now();
   for (long iv = 0; iv < info.volumes; iv++) {
     auto const &vol_start = log.now();
-    recon.Adj(reader.noncartesian(iv);, vol); // Initialize
+    recon.Adj(reader.noncartesian(iv), vol); // Initialize
     cg(its.Get(), thr.Get(), recon, vol, log);
     cropped = out_cropper.crop3(vol);
     if (tukey_s || tukey_e || tukey_h) {

@@ -1,5 +1,4 @@
-#include "io_hd5.h"
-#include "io_nifti.h"
+#include "io.h"
 #include "log.h"
 #include "parse_args.h"
 #include "slab_correct.h"
@@ -44,7 +43,7 @@ int main_zinfandel(args::Subparser &parser)
   writer.writeTrajectory(Trajectory(out_info, traj.points(), log));
   writer.writeMeta(reader.readMeta());
 
-  Cx3 rad_ks = info.noncartesianSeries();
+  Cx4 rad_ks = info.noncartesianSeries();
   for (long iv = 0; iv < info.volumes; iv++) {
     Cx3 vol = reader.noncartesian(iv);
     zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), l1.Get(), traj.points(), vol, log);

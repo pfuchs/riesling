@@ -38,7 +38,7 @@ int main_cgvar(args::Subparser &parser)
     senseMaps = LoadSENSE(senseFile.Get(), log);
   } else {
     senseMaps = DirectSENSE(
-      traj, osamp.Get(), kb, iter_fov.Get(), reader.noncartesian(iv), senseLambda.Get(), log);
+      traj, osamp.Get(), kb, iter_fov.Get(), senseLambda.Get(), senseVol.Get(), reader, log);
   }
 
   ReconOp recon(traj, osamp.Get(), kb, fastgrid, sdc.Get(), senseMaps, log);

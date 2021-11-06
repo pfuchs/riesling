@@ -4,8 +4,7 @@
 #include "espirit.h"
 #include "fft_plan.h"
 #include "filter.h"
-#include "io_hd5.h"
-#include "io_nifti.h"
+#include "io.h"
 #include "log.h"
 #include "op/grid.h"
 #include "parse_args.h"
@@ -31,14 +30,8 @@ int main_sense(args::Subparser &parser)
   HD5::Reader reader(iname.Get(), log);
   auto const traj = reader.readTrajectory();
   auto const &info = traj.info();
-  Cx4 sense = DirectSENSE(
-    traj,
-    osamp.Get(),
-    kb,
-    fov.Get(),
-    reader.noncartesian(LastOrVal(volume, info.volumes)),
-    lambda.Get(),
-    log);
+  Cx4 sense =
+    DirectSENSE(traj, osamp.Get(), kb, fov.Get(), lambda.Get(), volume.Get(), reader, log);
 
   auto const fname = OutName(iname.Get(), oname.Get(), "sense", oftype.Get());
   if (oftype.Get().compare("h5") == 0) {

@@ -3,7 +3,7 @@
 #include <hdf5.h>
 
 namespace HD5 {
-using Handle = uint64_t;
+using Handle = int64_t;
 
 template <typename T>
 struct type_tag

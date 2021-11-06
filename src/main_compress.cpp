@@ -1,7 +1,8 @@
 #include "compressor.h"
-#include "io_hd5.h"
+#include "io.h"
 #include "log.h"
 #include "parse_args.h"
+#include "sense.h"
 #include "types.h"
 
 int main_compress(args::Subparser &parser)
@@ -19,8 +20,7 @@ int main_compress(args::Subparser &parser)
 
   HD5::Reader reader(iname.Get(), log);
   Info const in_info = reader.readInfo();
-  Cx3 ks = in_info.noncartesianVolume();
-  reader.noncartesian(LastOrVal(ref_vol, in_info.volumes), ks);
+  Cx3 ks = reader.noncartesian(ValOrLast(ref_vol, in_info.volumes));
   long const max_ref = in_info.read_points - in_info.read_gap;
   long const nread = (readSize.Get() > max_ref) ? max_ref : readSize.Get();
   log.info(
@@ -34,7 +34,9 @@ int main_compress(args::Subparser &parser)
   out_info.channels = compressor.out_channels();
 
   Cx4 all_ks = in_info.noncartesianSeries();
-  reader.noncartesian(all_ks);
+  for (long iv = 0; iv < in_info.volumes; iv++) {
+    all_ks.chip(iv, 3) = reader.noncartesian(iv);
+  }
   Cx4 out_ks = out_info.noncartesianSeries();
   compressor.compress(all_ks, out_ks);
 

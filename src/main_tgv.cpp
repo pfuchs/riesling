@@ -49,7 +49,7 @@ int main_tgv(args::Subparser &parser)
     sense = LoadSENSE(senseFile.Get(), log);
   } else {
     sense = DirectSENSE(
-      traj, osamp.Get(), kb, iter_fov.Get(), reader.noncartesian(iv), senseLambda.Get(), log);
+      traj, osamp.Get(), kb, iter_fov.Get(), senseLambda.Get(), senseVol.Get(), reader, log);
   }
 
   ReconOp recon(traj, osamp.Get(), kb, fastgrid, sdc.Get(), sense, log);

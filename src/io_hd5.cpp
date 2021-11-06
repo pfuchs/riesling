@@ -1,4 +1,5 @@
 #include "io_hd5.h"
+#include "info.h"
 #include "io_hd5.hpp"
 #include <Eigen/Eigenvalues>
 #include <filesystem>
@@ -6,7 +7,7 @@
 
 namespace HD5 {
 
-void Init(Log &log)
+void Init()
 {
   static bool NeedsInit = true;
 

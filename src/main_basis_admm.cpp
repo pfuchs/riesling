@@ -4,6 +4,7 @@
 #include "cropper.h"
 #include "fft_plan.h"
 #include "filter.h"
+#include "io.h"
 #include "llr.h"
 #include "log.h"
 #include "op/grid.h"
@@ -43,13 +44,7 @@ int main_basis_admm(args::Subparser &parser)
     senseMaps = LoadSENSE(senseFile.Get(), log);
   } else {
     senseMaps = DirectSENSE(
-      traj,
-      osamp.Get(),
-      kb,
-      iter_fov.Get(),
-      reader.noncartesian(LastOrVal(senseVolume, info.volumes)),
-      senseLambda.Get(),
-      log);
+      traj, osamp.Get(), kb, iter_fov.Get(), senseLambda.Get(), senseVol.Get(), reader, log);
   }
 
   ReconBasisOp recon(traj, osamp.Get(), kb, fastgrid, sdc.Get(), senseMaps, basis, log);

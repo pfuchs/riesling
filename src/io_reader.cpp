@@ -1,5 +1,8 @@
 #include "io_reader.h"
 #include "io_hd5.h"
+#include "io_hd5.hpp"
+
+#include <filesystem>
 
 namespace HD5 {
 
@@ -10,7 +13,7 @@ Reader::Reader(std::string const &fname, Log &log)
   if (!std::filesystem::exists(fname)) {
     Log::Fail(fmt::format("File does not exist: {}", fname));
   }
-  Init(log_);
+  Init();
   handle_ = H5Fopen(fname.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   log_.info(FMT_STRING("Opened file {} for reading"), fname);
 }
@@ -55,9 +58,9 @@ std::map<std::string, float> Reader::readMeta() const
 Info Reader::readInfo()
 {
   log_.info("Reading info");
-  hid_t const info_id = InfoType(log_);
+  hid_t const info_id = InfoType();
   hid_t const dset = H5Dopen(handle_, Keys::Info.c_str(), H5P_DEFAULT);
-  CheckInfoType(dset, log_);
+  CheckInfoType(dset);
   hid_t const space = H5Dget_space(dset);
   Info info;
   herr_t status = H5Dread(dset, info_id, space, H5S_ALL, H5P_DATASET_XFER_DEFAULT, &info);
@@ -85,7 +88,7 @@ R2 Reader::readSDC(Info const &info)
   return sdc;
 }
 
-Cx3 const &Reader::noncartesian(long const index, Cx3 &vol)
+Cx3 const &Reader::noncartesian(long const index)
 {
   if (index == currentNCVol_) {
     log_.info("Using cached non-cartesion volume {}", index);

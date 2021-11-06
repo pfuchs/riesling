@@ -51,7 +51,7 @@ int main_basis_recon(args::Subparser &parser)
       sense = LoadSENSE(senseFile.Get(), log);
     } else {
       sense = DirectSENSE(
-        traj, osamp.Get(), kb, out_fov.Get(), reader.noncartesian(iv), senseLambda.Get(), log);
+        traj, osamp.Get(), kb, out_fov.Get(), senseLambda.Get(), senseVol.Get(), reader, log);
     }
   }
 

@@ -1,6 +1,6 @@
 #include "types.h"
 
-#include "io_hd5.h"
+#include "io.h"
 #include "log.h"
 #include "parse_args.h"
 
@@ -20,8 +20,7 @@ int main_split(args::Subparser &parser)
   auto info = traj.info();
   info.volumes = 1; // Only output one volume
   R3 all_points = traj.points();
-  Cx3 all_ks = info.noncartesianVolume();
-  reader.noncartesian(vol.Get(), all_ks);
+  Cx3 all_ks = reader.noncartesian(vol.Get());
 
   if (info.spokes_lo) {
     Info lo_info = info;

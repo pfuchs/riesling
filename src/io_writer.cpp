@@ -1,12 +1,13 @@
 #include "io_writer.h"
 #include "io_hd5.h"
+#include "io_hd5.hpp"
 
 namespace HD5 {
 
 Writer::Writer(std::string const &fname, Log &log)
   : log_(log)
 {
-  Init(log_);
+  Init();
   handle_ = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   if (handle_ < 0) {
     Log::Fail(FMT_STRING("Could not open file {} for writing"), fname);
@@ -23,7 +24,7 @@ Writer::~Writer()
 void Writer::writeInfo(Info const &info)
 {
   log_.info("Writing info struct");
-  hid_t info_id = InfoType(log_);
+  hid_t info_id = InfoType();
   hsize_t dims[1] = {1};
   auto const space = H5Screate_simple(1, dims, NULL);
   hid_t const dset =

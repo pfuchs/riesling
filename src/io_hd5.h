@@ -1,10 +1,14 @@
 #pragma once
 
+#include <cstdint>
+#include <string>
+
 namespace HD5 {
+using Handle = int64_t;
 
 void Init();
-hid_t InfoType();
-void CheckInfoType(hid_t handle);
+Handle InfoType();
+void CheckInfoType(Handle h);
 
 namespace Keys {
 std::string const Info = "info";
