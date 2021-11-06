@@ -34,15 +34,19 @@ int main_espirit(args::Subparser &parser)
   HD5::Reader reader(iname.Get(), log);
   auto const traj = reader.readTrajectory();
   auto const &info = traj.info();
-  Cx3 rad_ks = info.noncartesianVolume();
-  reader.noncartesian(LastOrVal(volume, info.volumes), rad_ks);
   log.info(FMT_STRING("Cropping data to {} mm effective resolution"), res.Get());
   auto gridder = make_grid(traj, osamp.Get(), kb, fastgrid, log, res);
   SDC::Choose("pipe", traj, gridder, log);
   long const totalCalRad = kRad.Get() + calRad.Get() + (info.spokes_lo ? 0 : info.read_gap);
   Cropper cropper(info, gridder->gridDims(), fov.Get(), log);
-  Cx4 sense = cropper.crop4(
-    ESPIRIT(gridder, rad_ks, kRad.Get(), totalCalRad, info.read_gap, thresh.Get(), log));
+  Cx4 sense = cropper.crop4(ESPIRIT(
+    gridder,
+    reader.noncartesian(LastOrVal(volume, info.volumes)),
+    kRad.Get(),
+    totalCalRad,
+    info.read_gap,
+    thresh.Get(),
+    log));
 
   auto const fname = OutName(iname.Get(), oname.Get(), "espirit", oftype.Get());
   if (oftype.Get().compare("h5") == 0) {

@@ -44,15 +44,14 @@ int main_zinfandel(args::Subparser &parser)
   writer.writeTrajectory(Trajectory(out_info, traj.points(), log));
   writer.writeMeta(reader.readMeta());
 
-  Cx4 rad_ks = info.noncartesianSeries();
-  reader.noncartesian(rad_ks);
+  Cx3 rad_ks = info.noncartesianSeries();
   for (long iv = 0; iv < info.volumes; iv++) {
-    Cx3 vol = rad_ks.chip(iv, 3);
+    Cx3 vol = reader.noncartesian(iv);
     zinfandel(gap_sz, src.Get(), spokes.Get(), read.Get(), l1.Get(), traj.points(), vol, log);
     if (pw && rbw) {
       slab_correct(out_info, pw.Get(), rbw.Get(), vol, log);
     }
-    rad_ks.chip(iv, 3);
+    rad_ks.chip(iv, 3) = vol;
   }
   writer.writeNoncartesian(rad_ks);
   log.info("Finished");

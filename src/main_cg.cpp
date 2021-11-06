@@ -27,7 +27,6 @@ int main_cg(args::Subparser &parser)
   HD5::Reader reader(iname.Get(), log);
   Trajectory const traj = reader.readTrajectory();
   Info const &info = traj.info();
-  Cx3 rad_ks = info.noncartesianVolume();
 
   Cx4 senseMaps = SENSE(senseFile.Get(), LastOrVal) if (senseFile)
   {
@@ -35,8 +34,14 @@ int main_cg(args::Subparser &parser)
   }
   else
   {
-    reader.noncartesian(LastOrVal(senseVolume, info.volumes), rad_ks);
-    senseMaps = DirectSENSE(traj, osamp.Get(), kb, iter_fov.Get(), rad_ks, senseLambda.Get(), log);
+    senseMaps = DirectSENSE(
+      traj,
+      osamp.Get(),
+      kb,
+      iter_fov.Get(),
+      reader.noncartesian(LastOrVal(senseVolume, info.volumes)),
+      senseLambda.Get(),
+      log);
   }
 
   ReconOp recon(traj, osamp.Get(), kb, fastgrid, sdc.Get(), senseMaps, log);
@@ -49,8 +54,7 @@ int main_cg(args::Subparser &parser)
   auto const &all_start = log.now();
   for (long iv = 0; iv < info.volumes; iv++) {
     auto const &vol_start = log.now();
-    reader.noncartesian(iv, rad_ks);
-    recon.Adj(rad_ks, vol); // Initialize
+    recon.Adj(reader.noncartesian(iv);, vol); // Initialize
     cg(its.Get(), thr.Get(), recon, vol, log);
     cropped = out_cropper.crop3(vol);
     if (tukey_s || tukey_e || tukey_h) {

@@ -34,7 +34,7 @@ int main_grid(args::Subparser &parser)
       rad_ks.reshape(Sz4{rad_ks.dimension(0), rad_ks.dimension(1), rad_ks.dimension(2), 1}));
     log.info("Wrote non-cartesian k-space. Took {}", log.toNow(vol_start));
   } else {
-    reader.noncartesian(0, rad_ks);
+    rad_ks = reader.noncartesian(0);
     gridder->Adj(rad_ks, grid);
     log.image(grid, "grid.nii");
     writer.writeCartesian(grid);

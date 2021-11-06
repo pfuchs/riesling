@@ -31,9 +31,14 @@ int main_sense(args::Subparser &parser)
   HD5::Reader reader(iname.Get(), log);
   auto const traj = reader.readTrajectory();
   auto const &info = traj.info();
-  Cx3 rad_ks = info.noncartesianVolume();
-  reader.noncartesian(LastOrVal(volume, info.volumes), rad_ks);
-  Cx4 sense = DirectSENSE(traj, osamp.Get(), kb, fov.Get(), rad_ks, lambda.Get(), log);
+  Cx4 sense = DirectSENSE(
+    traj,
+    osamp.Get(),
+    kb,
+    fov.Get(),
+    reader.noncartesian(LastOrVal(volume, info.volumes)),
+    lambda.Get(),
+    log);
 
   auto const fname = OutName(iname.Get(), oname.Get(), "sense", oftype.Get());
   if (oftype.Get().compare("h5") == 0) {

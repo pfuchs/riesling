@@ -32,7 +32,6 @@ int main_cgvar(args::Subparser &parser)
   HD5::Reader reader(iname.Get(), log);
   Trajectory const traj = reader.readTrajectory();
   Info const &info = traj.info();
-  Cx3 rad_ks = info.noncartesianVolume();
 
   Cx4 senseMaps;
   if (senseFile) {

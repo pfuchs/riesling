@@ -43,7 +43,13 @@ int main_basis_admm(args::Subparser &parser)
     senseMaps = LoadSENSE(senseFile.Get(), log);
   } else {
     senseMaps = DirectSENSE(
-      traj, osamp.Get(), kb, iter_fov.Get(), reader.noncartesian(iv), senseLambda.Get(), log);
+      traj,
+      osamp.Get(),
+      kb,
+      iter_fov.Get(),
+      reader.noncartesian(LastOrVal(senseVolume, info.volumes)),
+      senseLambda.Get(),
+      log);
   }
 
   ReconBasisOp recon(traj, osamp.Get(), kb, fastgrid, sdc.Get(), senseMaps, basis, log);
