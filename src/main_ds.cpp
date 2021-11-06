@@ -16,7 +16,7 @@ int main_ds(args::Subparser &parser)
   args::Positional<std::string> iname(parser, "FILE", "Input radial k-space file");
   args::ValueFlag<std::string> oname(parser, "OUTPUT", "Override output name", {"out", 'o'});
   args::ValueFlag<std::string> oftype(
-      parser, "OUT FILETYPE", "File type of output (nii/nii.gz/img/h5)", {"oft"}, "nii");
+    parser, "OUT FILETYPE", "File type of output (nii/nii.gz/img/h5)", {"oft"}, "nii");
 
   Log log = ParseCommand(parser, iname);
   HD5::Reader reader(iname.Get(), log);
@@ -44,14 +44,14 @@ int main_ds(args::Subparser &parser)
 
   // When k-space becomes undersampled need to flatten DC (Menon & Pipe 1999)
   float const approx_undersamp =
-      (M_PI * info.matrix.maxCoeff() * info.matrix.maxCoeff()) / info.spokes_hi;
+    (M_PI * info.matrix.maxCoeff() * info.matrix.maxCoeff()) / info.spokes_hi;
   float const flat_start = maxK / sqrt(approx_undersamp);
   float const flat_val = d_hi * (3. * (flat_start * flat_start) + 1. / 4.);
 
   auto const &all_start = log.now();
   for (long iv = 0; iv < info.volumes; iv++) {
     auto const &vol_start = log.now();
-    reader.readNoncartesian(iv, rad_ks);
+    reader.noncartesian(iv, rad_ks);
     channels.setZero();
     log.info("Beginning Direct Summation");
     auto fourier = [&](long const lo, long const hi) {
@@ -60,7 +60,7 @@ int main_ds(args::Subparser &parser)
         for (long iy = 0; iy < sy; iy++) {
           for (long ix = 0; ix < sx; ix++) {
             Point3 const c = Point3{
-                (ix - hx) / (float)(maxX), (iy - hy) / (float)(maxX), (iz - hz) / (float)(maxX)};
+              (ix - hx) / (float)(maxX), (iy - hy) / (float)(maxX), (iz - hz) / (float)(maxX)};
             for (long is = 0; is < info.spokes_total(); is++) {
               for (long ir = info.read_gap; ir < info.read_points; ir++) {
                 Point3 const r = traj.point(ir, is, maxK);
@@ -75,7 +75,7 @@ int main_ds(args::Subparser &parser)
                   dc = flat_val;
                 }
                 std::complex<float> const f_term =
-                    std::exp(2.if * pi * r.matrix().dot(c.matrix())) * dc / scale;
+                  std::exp(2.if * pi * r.matrix().dot(c.matrix())) * dc / scale;
 
                 for (long ic = 0; ic < info.channels; ic++) {
                   auto const val = rad_ks(ic, ir, is) * f_term;
@@ -92,7 +92,7 @@ int main_ds(args::Subparser &parser)
     log.info("Calculating RSS");
     WriteNifti(info, Cx4(channels.shuffle(Sz4{1, 2, 3, 0})), "chan.nii", log);
     out.chip(iv, 3).device(Threads::GlobalDevice()) =
-        (channels * channels.conjugate()).sum(Sz1{0}).sqrt();
+      (channels * channels.conjugate()).sum(Sz1{0}).sqrt();
     log.info("Volume {}: {}", iv, log.toNow(vol_start));
   }
   log.info("All volumes: {}", log.toNow(all_start));
