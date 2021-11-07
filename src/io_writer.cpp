@@ -4,6 +4,36 @@
 
 namespace HD5 {
 
+void store_matrix(
+  Handle const &parent,
+  std::string const &name,
+  Eigen::Ref<Eigen::MatrixXf const> const &data,
+  Log const &log)
+{
+  herr_t status;
+  hsize_t ds_dims[2], chunk_dims[2];
+  // HD5=row-major, Eigen=col-major, so need to reverse the dimensions
+  ds_dims[0] = data.cols();
+  ds_dims[1] = data.rows();
+  std::copy_n(ds_dims, 2, chunk_dims);
+  auto const space = H5Screate_simple(2, ds_dims, NULL);
+  auto const plist = H5Pcreate(H5P_DATASET_CREATE);
+  status = H5Pset_deflate(plist, 2);
+  status = H5Pset_chunk(plist, 2, chunk_dims);
+
+  hid_t const tid = type<float>();
+  hid_t const dset = H5Dcreate(parent, name.c_str(), tid, space, H5P_DEFAULT, plist, H5P_DEFAULT);
+  status = H5Dwrite(dset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
+  status = H5Pclose(plist);
+  status = H5Sclose(space);
+  status = H5Dclose(dset);
+  if (status) {
+    Log::Fail("Could not write tensor {}, code: {}", name, status);
+  } else {
+    log.info("Wrote dataset: {}", name);
+  }
+}
+
 Writer::Writer(std::string const &fname, Log &log)
   : log_(log)
 {

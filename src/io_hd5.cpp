@@ -96,4 +96,37 @@ void CheckInfoType(hid_t handle)
   }
 }
 
+template <>
+hid_t type_impl(type_tag<float>)
+{
+  return H5T_NATIVE_FLOAT;
+}
+
+template <>
+hid_t type_impl(type_tag<double>)
+{
+  return H5T_NATIVE_DOUBLE;
+}
+
+template <>
+hid_t type_impl(type_tag<std::complex<float>>)
+{
+  struct complex_t
+  {
+    float r; /*real part*/
+    float i; /*imaginary part*/
+  };
+
+  hid_t scalar_id = type_impl(type_tag<float>{});
+  hid_t complex_id = H5Tcreate(H5T_COMPOUND, sizeof(complex_t));
+  herr_t status;
+  status = H5Tinsert(complex_id, "r", HOFFSET(complex_t, r), scalar_id);
+  status = H5Tinsert(complex_id, "i", HOFFSET(complex_t, i), scalar_id);
+  if (status) {
+    throw std::runtime_error(
+      "Exception occurred creating complex datatype " + std::to_string(status));
+  }
+  return complex_id;
+}
+
 } // namespace HD5
