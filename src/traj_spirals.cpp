@@ -75,7 +75,7 @@ R3 Phyllotaxis(Info const &info, long const smoothness, long const spi, bool con
   long const nRead = info.read_points;
   long const nSpokes = info.spokes_total();
   if ((nSpokes % spi) != 0) {
-    Log::Fail("Spokers per interleave {} is not a divisor of total spokes {}", spi, nSpokes);
+    Log::Fail("Spokes per interleave {} is not a divisor of total spokes {}", spi, nSpokes);
   }
   long nInterleaves = nSpokes / spi;
   constexpr float phi_gold = 2.399963229728653;
@@ -120,8 +120,8 @@ R3 Phyllotaxis(Info const &info, long const smoothness, long const spi, bool con
         rot(2, 2) = cos(gm_theta);
         endPoint =
           rot.contract(endPoint, Eigen::IndexPairList<Eigen::type2indexpair<1, 0>>()).eval();
-        traj.chip((ii * spi) + is, 2) = endPoint.contract(read, empty);
       }
+      traj.chip((ii * spi) + is, 2) = endPoint.contract(read, empty);
     }
   }
   traj = traj * traj.constant(0.5); // Scale to -0.5 to 0.5
