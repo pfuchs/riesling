@@ -11,36 +11,28 @@
 
 template <int InPlane, int ThroughPlane>
 GridKB<InPlane, ThroughPlane>::GridKB(
-    Trajectory const &traj,
-    float const os,
-    bool const unsafe,
-    Log &log,
-    float const inRes,
-    bool const shrink)
-    : GridOp(traj.mapping(os, (InPlane / 2), inRes, shrink), unsafe, log)
-    , betaIn_{(float)M_PI *
-              sqrtf(pow(InPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
-    , betaThrough_{(float)M_PI *
-                   sqrtf(pow(ThroughPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
-    , fft_{Sz3{InPlane, InPlane, ThroughPlane}, Log(), 1}
+  Trajectory const &traj,
+  float const os,
+  bool const unsafe,
+  Log &log,
+  float const inRes,
+  bool const shrink)
+  : GridOp(traj.mapping(os, (InPlane / 2), inRes, shrink), unsafe, log)
+  , betaIn_{(float)M_PI * sqrtf(pow(InPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
+  , betaThrough_{(float)M_PI * sqrtf(pow(ThroughPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
+  , fft_{Sz3{InPlane, InPlane, ThroughPlane}, Log(), 1}
 {
-
   // Array of indices used when building the kernel
   std::iota(indIn_.data(), indIn_.data() + InPlane, -InPlane / 2);
   std::iota(indThrough_.data(), indThrough_.data() + ThroughPlane, -ThroughPlane / 2);
 }
 
 template <int InPlane, int ThroughPlane>
-GridKB<InPlane, ThroughPlane>::GridKB(
-    Mapping const &mapping,
-    bool const unsafe,
-    Log &log)
-    : GridOp(mapping, unsafe, log)
-    , betaIn_{(float)M_PI *
-              sqrtf(pow(InPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
-    , betaThrough_{(float)M_PI *
-                   sqrtf(pow(ThroughPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
-    , fft_{Sz3{InPlane, InPlane, ThroughPlane}, Log(), 1}
+GridKB<InPlane, ThroughPlane>::GridKB(Mapping const &mapping, bool const unsafe, Log &log)
+  : GridOp(mapping, unsafe, log)
+  , betaIn_{(float)M_PI * sqrtf(pow(InPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
+  , betaThrough_{(float)M_PI * sqrtf(pow(ThroughPlane * (mapping_.osamp - 0.5f) / mapping_.osamp, 2.f) - 0.8f)}
+  , fft_{Sz3{InPlane, InPlane, ThroughPlane}, Log(), 1}
 {
 
   // Array of indices used when building the kernel
@@ -48,15 +40,14 @@ GridKB<InPlane, ThroughPlane>::GridKB(
   std::iota(indThrough_.data(), indThrough_.data() + ThroughPlane, -ThroughPlane / 2);
 }
 
-
 template <int W, typename T>
 inline decltype(auto) KB(T const &x, float const beta)
 {
   return (x > (W / 2.f))
-      .select(
-          x.constant(0.f),
-          (x.constant(beta) * (x.constant(1.f) - (x * x.constant(2.f / W)).square()).sqrt())
-              .bessel_i0());
+    .select(
+      x.constant(0.f),
+      (x.constant(beta) * (x.constant(1.f) - (x * x.constant(2.f / W)).square()).sqrt())
+        .bessel_i0());
 }
 
 template <int InPlane, int ThroughPlane>
@@ -67,12 +58,13 @@ void GridKB<InPlane, ThroughPlane>::kernel(Point3 const r, float const dc, Kerne
 
   if constexpr (ThroughPlane > 1) {
     ThroughPlaneArray const kz =
-        KB<ThroughPlane>(indThrough_.constant(r[2]) - indThrough_, betaThrough_);
+      KB<ThroughPlane>(indThrough_.constant(r[2]) - indThrough_, betaThrough_);
     k = Outer(Outer(kx, ky), kz);
   } else {
     k = Outer(kx, ky);
   }
 
+  k = k * (dc / Sum(k));
   if (sqrt_) {
     // This is the worst possible way to do this but I cannot figure out what IFFT(SQRT(FFT(KB))) is
     Cx3 temp(InPlane, InPlane, ThroughPlane);
@@ -82,7 +74,6 @@ void GridKB<InPlane, ThroughPlane>::kernel(Point3 const r, float const dc, Kerne
     fft_.forward(temp);
     k = temp.real();
   }
-  k = k * dc / Sum(k);
 }
 
 template <int InPlane, int ThroughPlane>
@@ -138,12 +129,12 @@ void GridKB<InPlane, ThroughPlane>::Adj(Cx3 const &noncart, Cx4 &cart) const
       stC.set(2, c.y - (InPlane / 2));
       if (safe_) {
         stC.set(3, c.z - (ThroughPlane / 2) - minZ[ti]);
-        workspace[ti].slice(stC, szC) += nck.reshape(rshNC).broadcast(brdNC) *
-                                         k.template cast<Cx>().reshape(rshC).broadcast(brdC);
+        workspace[ti].slice(stC, szC) +=
+          nck.reshape(rshNC).broadcast(brdNC) * k.template cast<Cx>().reshape(rshC).broadcast(brdC);
       } else {
         stC.set(3, c.z - (ThroughPlane / 2));
-        cart.slice(stC, szC) += nck.reshape(rshNC).broadcast(brdNC) *
-                                k.template cast<Cx>().reshape(rshC).broadcast(brdC);
+        cart.slice(stC, szC) +=
+          nck.reshape(rshNC).broadcast(brdNC) * k.template cast<Cx>().reshape(rshC).broadcast(brdC);
       }
     }
   };
@@ -155,10 +146,11 @@ void GridKB<InPlane, ThroughPlane>::Adj(Cx3 const &noncart, Cx4 &cart) const
     log_.info("Combining thread workspaces...");
     for (long ti = 0; ti < nThreads; ti++) {
       if (szZ[ti]) {
-        cart.slice(
-                Sz4{0, 0, 0, minZ[ti]},
-                Sz4{cart.dimension(0), cart.dimension(1), cart.dimension(2), szZ[ti]})
-            .device(dev) += workspace[ti];
+        cart
+          .slice(
+            Sz4{0, 0, 0, minZ[ti]},
+            Sz4{cart.dimension(0), cart.dimension(1), cart.dimension(2), szZ[ti]})
+          .device(dev) += workspace[ti];
       }
     }
   }
@@ -193,11 +185,11 @@ void GridKB<InPlane, ThroughPlane>::A(Cx4 const &cart, Cx3 &noncart) const
       stC.set(2, c.y - (InPlane / 2));
       stC.set(3, c.z - (ThroughPlane / 2));
       noncart.chip(nc.spoke, 2).chip(nc.read, 1) = cart.slice(stC, szC).contract(
-          k.template cast<Cx>(),
-          Eigen::IndexPairList<
-              Eigen::type2indexpair<1, 0>,
-              Eigen::type2indexpair<2, 1>,
-              Eigen::type2indexpair<3, 2>>());
+        k.template cast<Cx>(),
+        Eigen::IndexPairList<
+          Eigen::type2indexpair<1, 0>,
+          Eigen::type2indexpair<2, 1>,
+          Eigen::type2indexpair<3, 2>>());
     }
   };
   auto const &start = log_.now();
@@ -220,9 +212,9 @@ R3 GridKB<InPlane, ThroughPlane>::apodization(Sz3 const sz) const
   fft.reverse(temp);
   R3 a = Crop3(R3(temp.real()), sz);
   float const scale =
-      sqrt(std::accumulate(gridSz.cbegin(), gridSz.cend(), 1, std::multiplies<long>()));
+    sqrt(std::accumulate(gridSz.cbegin(), gridSz.cend(), 1, std::multiplies<long>()));
   log_.info(
-      FMT_STRING("Apodization size {} scale factor: {}"), fmt::join(a.dimensions(), ","), scale);
+    FMT_STRING("Apodization size {} scale factor: {}"), fmt::join(a.dimensions(), ","), scale);
   a.device(Threads::GlobalDevice()) = a * a.constant(scale);
   return a;
 }

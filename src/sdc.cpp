@@ -91,8 +91,8 @@ R2 Pipe(Trajectory const &traj, std::unique_ptr<GridOp> &gridder, Log &log)
     gridder->Adj(W, temp);
     gridder->A(temp, Wp);
     Wp.device(Threads::GlobalDevice()) =
-      (Wp.real() > 0.f).select(W / Wp, W); // Avoid divide by zero problems
-    float const delta = R0((Wp - W).real().square().maximum())();
+      (Wp.real() > 0.f).select(W / Wp, Wp.constant(0.f)).eval(); // Avoid divide by zero problems
+    float const delta = R0((Wp - W).real().abs().maximum())();
     W.device(Threads::GlobalDevice()) = Wp;
     if (delta < 5.e-2) {
       log.info("SDC converged, delta was {}", delta);
