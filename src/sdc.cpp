@@ -8,14 +8,14 @@
 #include "trajectory.h"
 
 namespace SDC {
-void Choose(
+R2 Choose(
   std::string const &iname, Trajectory const &traj, std::unique_ptr<GridOp> &gridder, Log &log)
 {
-  R2 sdc;
+  R2 sdc(traj.info().read_points, traj.info().spokes_total());
   if (iname == "") {
-    return;
+    sdc.setConstant(1.f);
   } else if (iname == "none") {
-    return;
+    sdc.setConstant(1.f);
   } else if (iname == "pipe") {
     sdc = Pipe(traj, gridder, log);
   } else if (iname == "radial") {
@@ -36,7 +36,7 @@ void Choose(
     }
     sdc = reader.readSDC(sdcInfo);
   }
-  gridder->setSDC(sdc);
+  return sdc;
 }
 
 void Choose(

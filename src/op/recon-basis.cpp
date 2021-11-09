@@ -33,7 +33,7 @@ ReconBasisOp::ReconBasisOp(
   }
 
   auto grid1 = make_grid(gridder_->mapping(), kb, fast, log);
-  SDC::Choose(sdc, traj, grid1, gridder_, log);
+  gridder_->setSDC(SDC::Choose(sdc, traj, grid1, log));
 }
 
 Sz3 ReconBasisOp::dimensions() const

@@ -35,7 +35,7 @@ int main_tgv(args::Subparser &parser)
   auto const &info = traj.info();
 
   auto gridder = make_grid(traj, osamp.Get(), kb, fastgrid, log);
-  SDC::Choose(sdc.Get(), traj, gridder, log);
+  gridder->setSDC(SDC::Choose(sdc.Get(), traj, gridder, log));
 
   Cx4 grid = gridder->newMultichannel(info.channels);
   grid.setZero();
