@@ -38,6 +38,7 @@ add_library(vineyard
     src/io_nifti.cpp
     src/io_reader.cpp
     src/io_writer.cpp
+    src/kernel.cpp
     src/llr.cpp
     src/log.cpp
     src/padder.cpp

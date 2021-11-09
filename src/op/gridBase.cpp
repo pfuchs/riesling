@@ -1,14 +1,12 @@
 #include "gridBase.h"
 
 GridBase::GridBase(Mapping map, bool const unsafe, Log &log)
-    : mapping_{std::move(map)}
-    , safe_{!unsafe}
-    , sqrt_{false}
-    , log_{log}
-    , DCexp_{1.f}
+  : mapping_{std::move(map)}
+  , safe_{!unsafe}
+  , log_{log}
+  , DCexp_{1.f}
 {
 }
-
 
 Sz3 GridBase::gridDims() const
 {
@@ -23,10 +21,10 @@ void GridBase::setSDC(float const d)
 void GridBase::setSDC(R2 const &sdc)
 {
   std::transform(
-      mapping_.noncart.begin(),
-      mapping_.noncart.end(),
-      mapping_.sdc.begin(),
-      [&sdc](NoncartesianIndex const &nc) { return sdc(nc.read, nc.spoke); });
+    mapping_.noncart.begin(),
+    mapping_.noncart.end(),
+    mapping_.sdc.begin(),
+    [&sdc](NoncartesianIndex const &nc) { return sdc(nc.read, nc.spoke); });
 }
 
 void GridBase::setSDCExponent(float const dce)
@@ -52,16 +50,6 @@ void GridBase::setUnsafe()
 void GridBase::setSafe()
 {
   safe_ = false;
-}
-
-void GridBase::sqrtOn()
-{
-  sqrt_ = true;
-}
-
-void GridBase::sqrtOff()
-{
-  sqrt_ = false;
 }
 
 Mapping const &GridBase::mapping() const

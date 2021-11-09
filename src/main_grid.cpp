@@ -35,7 +35,6 @@ int main_grid(args::Subparser &parser)
   } else {
     rad_ks = reader.noncartesian(0);
     gridder->Adj(rad_ks, grid);
-    log.image(grid, "grid.nii");
     writer.writeCartesian(grid);
     log.info("Wrote cartesian k-space. Took {}", log.toNow(vol_start));
   }

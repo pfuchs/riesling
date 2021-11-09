@@ -56,7 +56,6 @@ void ReconBasisOp::A(Input const &x, Output &y) const
   auto dev = Threads::GlobalDevice();
   auto const &start = log_.now();
 
-  using FixOne = Eigen::type2index<1>;
   long const nB = x.dimension(0);
   Eigen::IndexList<FixOne, int, int, int> rshA;
   Eigen::IndexList<int, FixOne, FixOne, FixOne> brdA;
@@ -81,7 +80,6 @@ void ReconBasisOp::Adj(Output const &x, Input &y) const
   fft_.reverse(grid_);
   sense_.Adj(grid_, y);
 
-  using FixOne = Eigen::type2index<1>;
   long const nB = y.dimension(0);
   Eigen::IndexList<FixOne, int, int, int> rshA;
   Eigen::IndexList<int, FixOne, FixOne, FixOne> brdA;
