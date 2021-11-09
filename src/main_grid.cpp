@@ -18,7 +18,6 @@ int main_grid(args::Subparser &parser)
 
   auto gridder = make_grid(traj, osamp.Get(), kb, fastgrid, log);
   SDC::Choose(sdc.Get(), traj, gridder, log);
-  gridder->setSDCExponent(sdc_exp.Get());
   Cx3 rad_ks = info.noncartesianVolume();
   Cx4 grid = gridder->newMultichannel(info.channels);
 

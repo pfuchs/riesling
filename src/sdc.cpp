@@ -11,14 +11,15 @@ namespace SDC {
 void Choose(
   std::string const &iname, Trajectory const &traj, std::unique_ptr<GridOp> &gridder, Log &log)
 {
+  R2 sdc;
   if (iname == "") {
     return;
   } else if (iname == "none") {
     return;
   } else if (iname == "pipe") {
-    gridder->setSDC(Pipe(traj, gridder, log));
+    sdc = Pipe(traj, gridder, log);
   } else if (iname == "radial") {
-    gridder->setSDC(Radial(traj, log));
+    sdc = Radial(traj, log);
   } else {
     HD5::Reader reader(iname, log);
     auto const sdcInfo = reader.readInfo();
@@ -33,8 +34,9 @@ void Choose(
         trajInfo.read_points,
         trajInfo.spokes_total());
     }
-    gridder->setSDC(reader.readSDC(sdcInfo));
+    sdc = reader.readSDC(sdcInfo);
   }
+  gridder->setSDC(sdc);
 }
 
 void Choose(
@@ -44,14 +46,15 @@ void Choose(
   std::unique_ptr<GridBasisOp> &gridder2,
   Log &log)
 {
+  R2 sdc;
   if (iname == "") {
     return;
   } else if (iname == "none") {
     return;
   } else if (iname == "pipe") {
-    gridder2->setSDC(Pipe(traj, gridder, log));
+    sdc = Pipe(traj, gridder, log);
   } else if (iname == "radial") {
-    gridder2->setSDC(Radial(traj, log));
+    sdc = Radial(traj, log);
   } else {
     HD5::Reader reader(iname, log);
     auto const sdcInfo = reader.readInfo();
@@ -66,8 +69,9 @@ void Choose(
         trajInfo.read_points,
         trajInfo.spokes_total());
     }
-    gridder2->setSDC(reader.readSDC(sdcInfo));
+    sdc = reader.readSDC(sdcInfo);
   }
+  gridder2->setSDC(sdc);
 }
 
 R2 Pipe(Trajectory const &traj, std::unique_ptr<GridOp> &gridder, Log &log)

@@ -10,7 +10,6 @@ struct GridBase
   virtual R3 apodization(Sz3 const sz) const = 0; // Calculate the apodization factor for this grid
 
   Sz3 gridDims() const; // Returns the dimensions of the grid
-  void setSDCExponent(float const dce);
   void setSDC(float const dc);
   void setSDC(R2 const &sdc);
   void setUnsafe();
@@ -25,5 +24,4 @@ protected:
   Mapping mapping_;
   bool safe_;
   Log log_;
-  float DCexp_;
 };

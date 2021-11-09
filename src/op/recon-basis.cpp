@@ -46,11 +46,6 @@ Sz3 ReconBasisOp::outputDimensions() const
   return gridder_->outputDimensions();
 }
 
-void ReconBasisOp::setPreconditioning(float const p)
-{
-  gridder_->setSDCExponent(p);
-}
-
 void ReconBasisOp::A(Input const &x, Output &y) const
 {
   auto dev = Threads::GlobalDevice();

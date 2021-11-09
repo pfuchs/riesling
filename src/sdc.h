@@ -13,13 +13,13 @@ struct GridBasisOp;
 namespace SDC {
 
 void Choose(
-    std::string const &fname, Trajectory const &traj, std::unique_ptr<GridOp> &gridder, Log &log);
+  std::string const &fname, Trajectory const &traj, std::unique_ptr<GridOp> &gridder, Log &log);
 void Choose(
-    std::string const &fname,
-    Trajectory const &traj,
-    std::unique_ptr<GridOp> &gridder,
-    std::unique_ptr<GridBasisOp> &gridder2,
-    Log &log);
+  std::string const &fname,
+  Trajectory const &traj,
+  std::unique_ptr<GridOp> &gridder,
+  std::unique_ptr<GridBasisOp> &gridder2,
+  Log &log);
 
 R2 Pipe(Trajectory const &traj, std::unique_ptr<GridOp> &gridder, Log &log);
 R2 Radial(Trajectory const &traj, Log &log);

@@ -4,7 +4,6 @@ GridBase::GridBase(Mapping map, bool const unsafe, Log &log)
   : mapping_{std::move(map)}
   , safe_{!unsafe}
   , log_{log}
-  , DCexp_{1.f}
 {
 }
 
@@ -25,11 +24,6 @@ void GridBase::setSDC(R2 const &sdc)
     mapping_.noncart.end(),
     mapping_.sdc.begin(),
     [&sdc](NoncartesianIndex const &nc) { return sdc(nc.read, nc.spoke); });
-}
-
-void GridBase::setSDCExponent(float const dce)
-{
-  DCexp_ = dce;
 }
 
 R2 GridBase::SDC() const

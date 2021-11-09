@@ -92,7 +92,6 @@ add_executable(riesling
     src/main_basis_recon.cpp
     src/main_basis_sim.cpp
     src/main_cg.cpp
-    src/main_cgvar.cpp
     src/main_compress.cpp
     src/main_espirit.cpp
     src/main_grid.cpp

@@ -38,11 +38,6 @@ Sz3 ReconOp::outputDimensions() const
   return gridder_->outputDimensions();
 }
 
-void ReconOp::setPreconditioning(float const p)
-{
-  gridder_->setSDCExponent(p);
-}
-
 void ReconOp::calcToeplitz(Info const &info)
 {
   log_.info("Calculating Töplitz embedding");

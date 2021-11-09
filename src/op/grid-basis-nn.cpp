@@ -67,7 +67,7 @@ void GridBasisNN::Adj(Output const &noncart, Input &cart) const
       auto const si = mapping_.sortedIndices[ii];
       auto const c = mapping_.cart[si];
       auto const nc = mapping_.noncart[si];
-      auto const scale = pow(mapping_.sdc[si], DCexp_) * scale_;
+      auto const scale = mapping_.sdc[si] * scale_;
       if (safe_) {
         workspace[ti].chip(c.z - minZ[ti], 4).chip(c.y, 3).chip(c.x, 2) +=
           (noncart.chip(nc.spoke, 2).chip(nc.read, 1) *

@@ -84,7 +84,7 @@ void GridKB<InPlane, ThroughPlane>::Adj(Cx3 const &noncart, Cx4 &cart) const
       auto const c = mapping_.cart[si];
       auto const nc = mapping_.noncart[si];
       auto const nck = noncart.chip(nc.spoke, 2).chip(nc.read, 1);
-      auto const k = kernel_(mapping_.offset[si], pow(mapping_.sdc[si], DCexp_));
+      auto const k = kernel_(mapping_.offset[si], mapping_.sdc[si]);
       stC.set(1, c.x - (InPlane / 2));
       stC.set(2, c.y - (InPlane / 2));
       if (safe_) {
