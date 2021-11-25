@@ -39,10 +39,9 @@ KaiserBessel<IP, TP>::KaiserBessel(float const os)
   : beta_{(float)M_PI * sqrtf(pow(IP * (os - 0.5f) / os, 2.f) - 0.8f)}
 {
   // Get the normalization factor
-  R1 p(1);
-  p.setConstant(beta_);
-  p = p.bessel_i0();
-  scale_ = 1.f / p(0);
+  scale_ = 1.f;
+  KTensor k = operator()(Point3::Zero());
+  scale_ = 1.f / Sum(k);
 }
 
 template <int IP, int TP>
@@ -63,7 +62,7 @@ PipeSDC<IP, TP>::PipeSDC(float const os)
 {
   valScale_ = 1.f;
   KTensor k = operator()(Point3::Zero());
-  valScale_ = 1.f / sqrt(Sum(k));
+  valScale_ = 1.f / Norm2(k);
 }
 
 template <int IP, int TP>
@@ -72,12 +71,11 @@ typename PipeSDC<IP, TP>::KTensor PipeSDC<IP, TP>::operator()(Point3 const p) co
   KTensor x = DistSq<IP, TP>(p);
   KTensor x2 = (x * x.constant(distScale_)).sqrt(); // Pipe code unclear if sq or not
   constexpr float c = 0.99992359966186584;          // Constant term
-  constexpr std::array<double, 5> coeffs{
-    3.4511129626832091E-05,
-    -1.7986635886194154E-05,
-    1.3282009203652969E-08,
-    8.5313956268885989E-11,
-    -1.1469041640943728E-13};
+  constexpr std::array<double, 5> coeffs{3.4511129626832091E-05,
+                                         -1.7986635886194154E-05,
+                                         1.3282009203652969E-08,
+                                         8.5313956268885989E-11,
+                                         -1.1469041640943728E-13};
 
   KTensor result;
   result.setConstant(c);
