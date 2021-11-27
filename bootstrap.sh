@@ -13,7 +13,7 @@ case "$PLATFORM" in
   Darwin*)
     case "$ARCH" in
       x86_64*)  TOOLCHAIN="../cmake/x64-osx-native.toolchain.cmake";;
-      arm64*)   TOOLCHAIN="../cmake/vcpkg/triplets/arm64-osx.cmake";;
+      arm64*)   TOOLCHAIN="../cmake/vcpkg/triplets/community/arm64-osx.cmake";;
     esac
     ;;
   *)       TOOLCHAIN="../cmake/vcpkg/scripts/buildsystems/vcpkg.cmake";;
